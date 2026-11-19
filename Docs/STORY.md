@@ -68,7 +68,8 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 6. Clearing every wave breaks the seal on the stairs up.
 
 ### Between floors
-- There's a short breather on the stairs. You talk with one member, which gives a small boost to their Persona's stats. Personas stay in their base forms.
+- There's a short breather on the stairs. You talk with one party member, which gives a small boost to their Persona's stats. Personas stay in their base forms.
+- Like Social Links in the game, the bond also boosts **Makoto's Persona(s) of that member's Arcana**. For example, Junpei (Magician) boosts Jack Frost, Akihiko (Emperor) boosts Oberon, and Shinjiro (Hierophant) boosts both Thoth and Shiisaa.
 
 ### Final floor
 - You reach the Shadow causing the seal (the boss). It fights while summoning its own waves.
