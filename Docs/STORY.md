@@ -70,6 +70,8 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 ### Between floors
 - There's a short breather on the stairs. You talk with one party member, which gives a small boost to their Persona's stats. Personas stay in their base forms.
 - Like Social Links in the game, the bond also boosts **Makoto's Persona(s) of that member's Arcana**. For example, Junpei (Magician) boosts Jack Frost, Akihiko (Emperor) boosts Oberon, and Shinjiro (Hierophant) boosts both Thoth and Shiisaa.
+- **Fuuka** can also be chosen at the breather, alongside the party members. Bonding with her boosts **Sarasvati** (Priestess). She's still the navigator, not a tower.
+- **Orpheus** (Fool) gets a small boost each time the team clears a floor, because the Fool Social Link is S.E.E.S. as a whole.
 
 ### Final floor
 - You reach the Shadow causing the seal (the boss). It fights while summoning its own waves.
