@@ -136,7 +136,7 @@ namespace MidnightHour
                 M(PartyMember.Ken, "Ken", P("Nemesis", PartyMember.Ken, Arcana.Justice, Element.Light, TowerRole.Executioner, Own,
                     "Executioner. Chance to instantly kill weakened, non-boss Shadows.",
                     1.0f, 20f, 14f, 9f, 2.8f, 0.3f, new Color(1f, 0.96f, 0.6f))),
-                // [CHECK] STORY.md lists Cerberus as "Mudo / Agi". Dark is a placeholder until that's settled (#6).
+                // STORY.md lists Cerberus as "Mudo / Agi": Dark is his element, and Fire is flavour only (decided 2026-11-18).
                 M(PartyMember.Koromaru, "Koromaru", P("Cerberus", PartyMember.Koromaru, Arcana.Strength, Element.Dark, TowerRole.Debuffer, Own,
                     "Debuffer. Curses Shadows, so they take more damage from everyone.",
                     1.4f, 18f, 8f, 8f, 1.6f, 0.3f, new Color(0.62f, 0.18f, 0.8f))),
@@ -148,10 +148,7 @@ namespace MidnightHour
 
         /// <summary>
         /// Makoto's 11 Personas (the Wild Card). He can field each one once.
-        /// STORY.md doesn't give their elements, so most are Element.None (neutral damage) until the
-        /// student decides. Jack Frost (Ice) and Oberon (Elec) follow their role text: "frost mines"
-        /// and "chain lightning".
-        /// [CHECK] Arcana marked as inferred in STORY.md §5: Shiisaa, Thoth, Thor, Melchizedek, Lakshmi, Valkyrie.
+        /// Elements are from STORY.md §5 (decided 2026-11-18). Sarasvati is neutral (Element.None).
         /// </summary>
         public static List<TowerDef> MakotoPersonas()
         {
@@ -159,7 +156,7 @@ namespace MidnightHour
             const PersonaSource Movie = PersonaSource.Movie, Game = PersonaSource.Game;
             return new List<TowerDef>
             {
-                P("Orpheus", Mk, Arcana.Fool, Element.None, TowerRole.Generalist, Movie,
+                P("Orpheus", Mk, Arcana.Fool, Element.Fire, TowerRole.Generalist, Movie,
                   "Generalist. Balanced at everything; a solid tower to place first.",
                   1.2f, 21f, 12f, 8.5f, 2.2f, 0.3f, new Color(0.85f, 0.3f, 0.35f)),
                 P("Jack Frost", Mk, Arcana.Magician, Element.Ice, TowerRole.Trapper, Movie,
@@ -171,25 +168,25 @@ namespace MidnightHour
                 P("Oberon", Mk, Arcana.Emperor, Element.Elec, TowerRole.ChainLightning, Movie,
                   "Chain lightning. Each hit jumps to several more Shadows.",
                   1.3f, 26f, 9f, 8f, 2.1f, 0.25f, new Color(1f, 0.8f, 0.35f)),
-                P("Thoth", Mk, Arcana.Hierophant, Element.None, TowerRole.SpBattery, Movie,
+                P("Thoth", Mk, Arcana.Hierophant, Element.Fire, TowerRole.SpBattery, Movie,
                   "SP battery. Generates team SP over time.",
                   0.7f, 13f, 8f, 7.5f, 3.6f, 0.3f, new Color(0.45f, 0.6f, 1f)),
-                P("Shiisaa", Mk, Arcana.Hierophant, Element.None, TowerRole.LastLine, Movie,
+                P("Shiisaa", Mk, Arcana.Hierophant, Element.Strike, TowerRole.LastLine, Movie,
                   "Last line of defense. Short range, but very heavy damage to any Shadow close to the team.",
                   2.2f, 22f, 20f, 4.5f, 1.1f, 0.35f, new Color(0.95f, 0.55f, 0.25f)),
-                P("Thor", Mk, Arcana.Chariot, Element.None, TowerRole.AntiAir, Movie,
+                P("Thor", Mk, Arcana.Chariot, Element.Elec, TowerRole.AntiAir, Movie,
                   "Anti-air. Heavy damage to flying Shadows.",
                   0.75f, 34f, 24f, 10f, 3.8f, 0.4f, new Color(0.75f, 0.8f, 1f)),
-                P("Melchizedek", Mk, Arcana.Justice, Element.None, TowerRole.Pulse, Movie,
+                P("Melchizedek", Mk, Arcana.Justice, Element.Light, TowerRole.Pulse, Movie,
                   "Pulse. Damages every Shadow around it every few seconds, with no projectile.",
                   0.4f, 11f, 16f, 6f, 3.2f, 0.45f, new Color(1f, 0.9f, 0.75f)),
-                P("Lakshmi", Mk, Arcana.Empress, Element.None, TowerRole.ResistanceBreaker, Game,
+                P("Lakshmi", Mk, Arcana.Empress, Element.Ice, TowerRole.ResistanceBreaker, Game,
                   "Resistance breaker. Nearby Shadows lose their resistances.",
                   0.85f, 15f, 9f, 7f, 2.9f, 0.3f, new Color(1f, 0.6f, 0.8f)),
-                P("Pixie", Mk, Arcana.Lovers, Element.None, TowerRole.Multishot, Game,
+                P("Pixie", Mk, Arcana.Lovers, Element.Elec, TowerRole.Multishot, Game,
                   "Multishot. Fires small shots at up to 3 Shadows at once.",
                   2.6f, 28f, 4f, 7.5f, 1.4f, 0.18f, new Color(1f, 0.75f, 0.95f)),
-                P("Valkyrie", Mk, Arcana.Strength, Element.None, TowerRole.Interceptor, Game,
+                P("Valkyrie", Mk, Arcana.Strength, Element.Slash, TowerRole.Interceptor, Game,
                   "Interceptor. Targets the fastest Shadow in range first and hits fast Shadows harder.",
                   1.8f, 38f, 11f, 9f, 1.8f, 0.25f, new Color(0.9f, 0.3f, 0.3f)),
             };
