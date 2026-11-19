@@ -62,8 +62,25 @@ namespace MidnightHour
         public AudioClip gameOverSound;
         public AudioClip victorySound;
 
+        // Bumped when DefaultContent changes shape in a way old scene data can't follow.
+        // v1 (#5): the starter Shadows were replaced by the Tziah I roster, and the floors index the new list.
+        const int ContentVersion = 1;
+        [SerializeField, HideInInspector] int contentVersion = 0;
+
+        /// <summary>Replaces outdated saved content (here: the old 4-Shadow list) with the current defaults.</summary>
+        void UpgradeContent()
+        {
+            if (contentVersion >= ContentVersion) return;
+            enemies = DefaultContent.Enemies();
+            floors = DefaultContent.Floors();
+            contentVersion = ContentVersion;
+        }
+
+        void OnValidate() { UpgradeContent(); }
+
         void Reset()
         {
+            contentVersion = ContentVersion;
             enemies = DefaultContent.Enemies();
             floors = DefaultContent.Floors();
             members = DefaultContent.Members();
@@ -84,6 +101,7 @@ namespace MidnightHour
 
         void Awake()
         {
+            UpgradeContent();
             FillMissing();
 
             Camera cam = SetupCamera();

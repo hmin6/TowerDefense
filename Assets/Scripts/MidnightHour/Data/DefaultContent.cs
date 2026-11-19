@@ -9,8 +9,9 @@ namespace MidnightHour
     /// </summary>
     public static class DefaultContent
     {
-        // Indices used by the waves below.
-        public const int Mask = 0, Slime = 1, Knight = 2, Reaper = 3;
+        // Indices into Enemies(), used by the floors below. Order = STORY.md §3, floor by floor.
+        public const int Maya = 0, Sigil = 1, Drive = 2, Wheel = 3, Knight = 4, Turret = 5, Tiara = 6, Idol = 7,
+                         Twins = 8, Mother = 9, Relic = 10, Magus = 11, Musha = 12, Table = 13, Reaper = 14;
 
         /// <summary>Field limit per floor (STORY.md §2): the closer to the Jailer, the stricter.</summary>
         public static List<int> FieldLimits()
@@ -18,38 +19,74 @@ namespace MidnightHour
             return new List<int> { 8, 7, 6, 6, 5, 4 };
         }
 
+        static EnemyDef S(string name, float hp, float speed, Element[] weak, Element[] resist,
+                          PrimitiveType shape, Vector3 scale, Color color, int sp,
+                          ShadowMovement movement = ShadowMovement.Ground, ShadowRank rank = ShadowRank.Normal)
+        {
+            var e = new EnemyDef
+            {
+                displayName = name, maxHP = hp, speed = speed, spReward = sp,
+                movement = movement, rank = rank, shape = shape, scale = scale, color = color,
+            };
+            e.weaknesses.AddRange(weak);
+            e.resists.AddRange(resist);
+            return e;
+        }
+
+        static readonly Element[] None = new Element[0];
+        static Element[] E(params Element[] e) { return e; }
+
+        /// <summary>
+        /// The Tziah I Shadows (STORY.md §3). Weaknesses and resistances are from the original Persona 3 table.
+        /// HP and speed are PLACEHOLDERS to tune in playtesting (#17). STORY.md only fixes these relations:
+        /// Drives and Wheels are fast, Tiaras and Idols fly, Champion Knight is tanky and resists physical,
+        /// the Arcane Turret has the highest HP of the regular Shadows, and Hakurou Musha is the strongest
+        /// Shadow in Tziah I. The Reaper stays as the floor-6 boss until the Jailer (#12).
+        /// </summary>
         public static List<EnemyDef> Enemies()
         {
+            const ShadowMovement Fast = ShadowMovement.Fast, Fly = ShadowMovement.Flying;
+            const ShadowRank FloorBoss = ShadowRank.FloorBoss;
+            var table = S("Sleeping Table", 1500f, 0.9f, E(Element.Ice, Element.Light, Element.Dark), None,
+                          PrimitiveType.Cube, new Vector3(2.2f, 1.1f, 1.6f), new Color(0.3f, 0.22f, 0.08f), 60, rank: FloorBoss);
+            table.blocksAilments = true;
             return new List<EnemyDef>
             {
-                new EnemyDef
-                {
-                    displayName = "Cowardly Mask", maxHP = 32f, speed = 4.2f,
-                    weaknesses = { Element.Elec }, resists = { Element.Fire }, spReward = 12,
-                    shape = PrimitiveType.Sphere, scale = new Vector3(0.9f, 0.9f, 0.9f),
-                    color = new Color(0.16f, 0.1f, 0.22f)
-                },
-                new EnemyDef
-                {
-                    displayName = "Gloom Slime", maxHP = 75f, speed = 2.6f,
-                    weaknesses = { Element.Ice }, resists = { Element.Elec }, spReward = 20,
-                    shape = PrimitiveType.Sphere, scale = new Vector3(1.3f, 0.8f, 1.3f),
-                    color = new Color(0.28f, 0.04f, 0.12f)
-                },
-                new EnemyDef
-                {
-                    displayName = "Iron Knight", maxHP = 190f, speed = 1.7f,
-                    weaknesses = { Element.Fire }, resists = { Element.Ice }, spReward = 35,
-                    shape = PrimitiveType.Capsule, scale = new Vector3(0.9f, 0.9f, 0.9f),
-                    color = new Color(0.12f, 0.12f, 0.16f)
-                },
-                new EnemyDef
-                {
-                    displayName = "The Reaper", maxHP = 3200f, speed = 1.1f,
-                    weaknesses = { }, resists = { }, spReward = 0, rank = ShadowRank.Boss,
-                    shape = PrimitiveType.Capsule, scale = new Vector3(1.3f, 1.5f, 1.3f),
-                    color = new Color(0.02f, 0.02f, 0.02f)
-                },
+                // Floor 1: basic Shadows
+                S("Ill-fated Maya", 40f, 3.2f, E(Element.Elec, Element.Wind), None,
+                  PrimitiveType.Sphere, new Vector3(0.9f, 0.9f, 0.9f), new Color(0.16f, 0.1f, 0.22f), 10),
+                S("Blue Sigil", 55f, 2.8f, E(Element.Dark), None,
+                  PrimitiveType.Cylinder, new Vector3(0.9f, 0.7f, 0.9f), new Color(0.08f, 0.12f, 0.3f), 12),
+                // Floor 2: fast Shadows (vehicles)
+                S("Killer Drive", 45f, 5.6f, E(Element.Light), None,
+                  PrimitiveType.Cube, new Vector3(1.1f, 0.6f, 1.6f), new Color(0.25f, 0.06f, 0.06f), 12, Fast),
+                S("Brave Wheel", 70f, 4.8f, E(Element.Ice), None,
+                  PrimitiveType.Cylinder, new Vector3(1.3f, 0.45f, 1.3f), new Color(0.22f, 0.16f, 0.05f), 14, Fast),
+                // Floor 3: tanky Shadows, ending with three Arcane Turrets
+                S("Champion Knight", 230f, 1.8f, E(Element.Wind), E(Element.Slash, Element.Strike, Element.Pierce),
+                  PrimitiveType.Capsule, new Vector3(0.95f, 0.95f, 0.95f), new Color(0.14f, 0.14f, 0.18f), 25),
+                S("Arcane Turret", 600f, 1.0f, E(Element.Elec), None,
+                  PrimitiveType.Cylinder, new Vector3(1.4f, 1.1f, 1.4f), new Color(0.2f, 0.18f, 0.1f), 40, rank: FloorBoss),
+                // Floor 4: flying Shadows
+                S("Writhing Tiara", 60f, 3.0f, E(Element.Ice), None,
+                  PrimitiveType.Sphere, new Vector3(0.8f, 0.55f, 0.8f), new Color(0.28f, 0.2f, 0.06f), 12, Fly),
+                S("Tranquil Idol", 85f, 2.6f, E(Element.Dark), None,
+                  PrimitiveType.Capsule, new Vector3(0.6f, 0.6f, 0.6f), new Color(0.12f, 0.2f, 0.18f), 14, Fly),
+                // Floor 5: everything at once, ending with the Sleeping Table
+                S("Death Twins", 130f, 2.8f, E(Element.Strike), None,
+                  PrimitiveType.Capsule, new Vector3(0.8f, 0.8f, 0.8f), new Color(0.2f, 0.04f, 0.1f), 18),
+                S("Elegant Mother", 160f, 2.2f, E(Element.Elec, Element.Dark), None,
+                  PrimitiveType.Sphere, new Vector3(1.35f, 1.1f, 1.35f), new Color(0.25f, 0.08f, 0.2f), 20),
+                S("Constancy Relic", 140f, 2.4f, E(Element.Fire), None,
+                  PrimitiveType.Cube, new Vector3(1f, 1f, 1f), new Color(0.18f, 0.16f, 0.12f), 18),
+                S("Magical Magus", 120f, 3.0f, E(Element.Fire), None,
+                  PrimitiveType.Capsule, new Vector3(0.75f, 0.85f, 0.75f), new Color(0.1f, 0.06f, 0.22f), 18),
+                S("Hakurou Musha", 420f, 2.6f, E(Element.Light, Element.Dark), None,
+                  PrimitiveType.Capsule, new Vector3(1.1f, 1.2f, 1.1f), new Color(0.3f, 0.3f, 0.32f), 35),
+                table,
+                // Floor 6: placeholder boss until the Jailer (#12)
+                S("The Reaper", 3200f, 1.1f, None, None,
+                  PrimitiveType.Capsule, new Vector3(1.3f, 1.5f, 1.3f), new Color(0.02f, 0.02f, 0.02f), 0, rank: ShadowRank.Boss),
             };
         }
 
@@ -186,25 +223,35 @@ namespace MidnightHour
         }
 
         /// <summary>
-        /// Six sealed floors (STORY.md §3), each with two waves. Every floor uses the board's default path.
-        /// The Shadows are still the starter kit's until the Tziah I roster (#5) and the Jailer (#12) replace them.
+        /// Six sealed floors with the Tziah I lineup (STORY.md §3). Each floor introduces one new thing.
+        /// Wave sizes and spacing are PLACEHOLDERS to tune in playtesting (#17). Every floor still uses the
+        /// board's default path until the Tartarus layouts (#25).
         /// </summary>
         public static List<FloorDef> Floors()
         {
             return new List<FloorDef>
             {
-                F(1, W(25, G(Mask, 5, 1.1f)),
-                     W(50, G(Mask, 6, 0.9f))),
-                F(2, W(25, G(Mask, 6, 0.9f)),
-                     W(75, G(Slime, 4, 1.6f), G(Mask, 4, 0.8f, 2f))),
-                F(3, W(25, G(Slime, 6, 1.2f)),
-                     W(75, G(Knight, 2, 3f), G(Mask, 8, 0.5f, 2f))),
-                F(4, W(50, G(Knight, 4, 2.2f), G(Mask, 6, 0.5f, 1.5f)),
-                     W(75, G(Mask, 6, 0.45f), G(Slime, 6, 1f, 1.5f))),
-                F(5, W(50, G(Mask, 12, 0.4f)),
-                     W(100, G(Knight, 6, 1.6f), G(Slime, 10, 0.7f, 1f))),
-                F(6, W(50, G(Mask, 10, 0.4f), G(Knight, 5, 1.5f, 1f)),
-                     W(0, G(Reaper, 1, 1f, 1f), G(Slime, 8, 1.2f, 2f))),
+                // 1: basic Shadows (teaches placement and weaknesses)
+                F(1, W(25, G(Maya, 6, 1.1f)),
+                     W(50, G(Sigil, 4, 1.5f), G(Maya, 6, 0.9f, 1.5f))),
+                // 2: fast Shadows (teaches skills)
+                F(2, W(25, G(Drive, 5, 1.2f)),
+                     W(50, G(Wheel, 4, 1.4f), G(Drive, 6, 0.8f, 1.5f))),
+                // 3: tanky Shadows, ending with three Arcane Turrets (the 122F boss in the original game)
+                F(3, W(25, G(Knight, 3, 2.5f)),
+                     W(50, G(Knight, 4, 2f)),
+                     W(75, G(Turret, 3, 3f))),
+                // 4: flying Shadows
+                F(4, W(25, G(Tiara, 6, 1f)),
+                     W(50, G(Idol, 4, 1.4f), G(Tiara, 5, 0.8f, 1.5f))),
+                // 5: everything at once, plus Hakurou Musha, ending with the Sleeping Table (the 135F sub-boss)
+                F(5, W(25, G(Twins, 4, 1.2f), G(Relic, 3, 1.6f, 1f)),
+                     W(50, G(Mother, 3, 1.8f), G(Magus, 4, 1.1f, 1f)),
+                     W(75, G(Musha, 2, 3f), G(Twins, 3, 1f, 1f), G(Magus, 3, 1f, 1f)),
+                     W(100, G(Table, 1, 1f))),
+                // 6: boss floor. The Reaper + mixed summons are placeholders for the Jailer and its summons (#12)
+                F(6, W(50, G(Maya, 6, 0.6f), G(Drive, 4, 0.8f, 1f), G(Tiara, 4, 0.9f, 1f)),
+                     W(0, G(Reaper, 1, 1f), G(Knight, 3, 2f, 2f), G(Idol, 3, 1.2f, 1f))),
             };
         }
 
