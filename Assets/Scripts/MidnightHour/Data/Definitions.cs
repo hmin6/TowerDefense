@@ -207,8 +207,23 @@ namespace MidnightHour
     [System.Serializable]
     public class WaveDef
     {
-        public string title = "Night";
+        [Tooltip("Only used in warnings and logs.")]
+        public string title = "Wave";
+        [Tooltip("SP given when this wave is cleared.")]
         public int clearBonus = 100;
         public List<SpawnGroup> groups = new List<SpawnGroup>();
+    }
+
+    /// <summary>One sealed floor of Tartarus (STORY.md §2-3): its waves, and optionally its own path.</summary>
+    [System.Serializable]
+    public class FloorDef
+    {
+        [Tooltip("Shown on banners, the status panel and Fuuka's scan.")]
+        public string title = "Floor";
+        [Tooltip("The floor's waves, in order. The seal breaks when the last one is cleared.")]
+        public List<WaveDef> waves = new List<WaveDef>();
+        [Tooltip("Optional: this floor's own path (2+ points, smoothed into a winding route).\n" +
+                 "Empty = the board's default path (GameBootstrap > Map).")]
+        public List<Vector3> pathPoints = new List<Vector3>();
     }
 }

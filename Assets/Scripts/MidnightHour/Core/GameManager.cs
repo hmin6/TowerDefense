@@ -3,17 +3,21 @@ using UnityEngine;
 
 namespace MidnightHour
 {
-    public enum GameState { Briefing, Planning, Night, FreeTime, Victory, GameOver, PartySelect, Dismiss }
+    public enum GameState { Briefing, Planning, Battle, Scan, Victory, GameOver, PartySelect, Dismiss }
 
-    /// <summary>Persona-style "Social Links" you rank up between nights.</summary>
+    /// <summary>Persona-style "Social Links". Nothing ranks them up any more; #14 replaces them with bonds.</summary>
     public enum SocialLink { Magician, Empress, Chariot, Fool }
 
     /// <summary>
-    /// Game rules and flow:
-    /// Briefing -> PartySelect (Makoto + 3) -> Planning (place towers) -> Night (wave)
-    ///   -> FreeTime (rank a Social Link) -> PartySelect (swap members)
-    ///   -> Dismiss (only if over the new, lower field limit) -> Planning ...
-    /// The game ends the moment any Shadow reaches the Clock Tower.
+    /// Game rules and flow (STORY.md §2). S.E.E.S. climbs 6 sealed floors of Tartarus:
+    ///
+    ///   Briefing -> PartySelect (Makoto + 3) -> Scan (arrive: the stairs seal, Fuuka scans floor 1)
+    ///     -> Planning (deploy) -> Battle (the floor's waves) -> SEAL BROKEN
+    ///     -> Scan (the stairs breather: Fuuka previews the next floor) -> PartySelect (swap members)
+    ///     -> Dismiss (only if over the new, lower field limit) -> Planning (next floor) -> ...
+    ///   Clearing floor 6 is a victory.
+    ///
+    /// The game ends the moment any Shadow reaches the team's position (S.E.E.S. is overrun).
     /// </summary>
     [DefaultExecutionOrder(-50)]
     public class GameManager : MonoBehaviour
@@ -26,16 +30,20 @@ namespace MidnightHour
         public float resistMultiplier = 0.5f;
         public float knockdownDuration = 1.6f;
 
+        [Header("Floors")]
+        [Tooltip("Seconds between two waves on the same floor (towers can still be placed).")]
+        public float wavePause = 4f;
+
         [Header("Field limit (STORY.md §2)")]
         [Tooltip("Most towers allowed on the field at once, per floor (STORY.md: 8, 7, 6, 6, 5, 4). " +
-                 "Until floors exist (#4), night N uses entry N. Later floors reuse the last entry.")]
+                 "Floor N uses entry N; later floors reuse the last entry.")]
         public List<int> fieldLimits = new List<int> { 8, 7, 6, 6, 5, 4 };
 
         [Header("Party (STORY.md §2)")]
         [Tooltip("How many members join Makoto. STORY.md: 3. Keys 1-3 pick their Personas, so 3 is the maximum.")]
         [Range(1, 3)] public int partySize = 3;
 
-        [Header("Social Links (per rank)")]
+        [Header("Social Links (per rank; removed in #14)")]
         public float rankDamageBonus = 0.25f;
         public float rankFireRateBonus = 0.10f;
 
@@ -61,14 +69,21 @@ namespace MidnightHour
         /// <summary>How many entries at the start of <see cref="Towers"/> belong to party members (keys 1-3).</summary>
         public int MemberTowerCount { get; private set; }
         public List<EnemyDef> Enemies { get; private set; } = new List<EnemyDef>();
-        public List<WaveDef> Waves { get; private set; } = new List<WaveDef>();
+        public List<FloorDef> Floors { get; private set; } = new List<FloorDef>();
         public List<MemberDef> Members { get; private set; } = new List<MemberDef>();
         public List<TowerDef> MakotoPersonas { get; private set; } = new List<TowerDef>();
 
         public GameState State { get; private set; } = GameState.Briefing;
         public int StateChangedFrame { get; private set; } = -1;
         public int SP { get; private set; }
-        public int WaveIndex { get; private set; }
+        /// <summary>0-based floor the team is on (or, during the breather, the floor it's climbing to).</summary>
+        public int FloorIndex { get; private set; }
+        /// <summary>0-based wave within the current floor.</summary>
+        public int WaveInFloor { get; private set; }
+        /// <summary>Seconds until the next wave on this floor starts (0 = a wave is running).</summary>
+        public float WaveGapTimer { get; private set; }
+        /// <summary>True when the Scan screen is the stairs breather (preview of the next floor), false on arrival at floor 1.</summary>
+        public bool ScanIsBreather { get; private set; }
         public int Kills { get; private set; }
         public int AllOutCount { get; private set; }
         public bool IsPaused { get; private set; }
@@ -76,20 +91,39 @@ namespace MidnightHour
 
         public int TowerCount { get { return Tower.All.Count; } }
         /// <summary>The current floor's field limit. Placing is free; this is the only limit, and nothing raises it.</summary>
-        public int FieldLimit { get { return LimitForFloor(WaveIndex); } }
+        public int FieldLimit { get { return LimitForFloor(FloorIndex); } }
         public bool FieldFull { get { return TowerCount >= FieldLimit; } }
-        public bool CanPlaceNow { get { return State == GameState.Planning || State == GameState.Night; } }
+        public bool CanPlaceNow { get { return State == GameState.Planning || State == GameState.Battle; } }
         public bool IsModalState
         {
             get
             {
                 return State == GameState.Briefing || State == GameState.PartySelect || State == GameState.Dismiss ||
-                       State == GameState.FreeTime || State == GameState.Victory || State == GameState.GameOver;
+                       State == GameState.Scan || State == GameState.Victory || State == GameState.GameOver;
             }
         }
         public int ShadowsRemaining
         {
-            get { return (spawner != null ? spawner.RemainingToSpawn : 0) + Enemy.AliveCount; }
+            get
+            {
+                int queued = 0;
+                var floor = CurrentFloor;
+                if (State == GameState.Battle && floor != null)
+                    for (int w = WaveInFloor + (WaveGapTimer > 0f ? 0 : 1); w < floor.waves.Count; w++)
+                        queued += CountShadows(floor.waves[w]);
+                return queued + (spawner != null ? spawner.RemainingToSpawn : 0) + Enemy.AliveCount;
+            }
+        }
+
+        public FloorDef CurrentFloor { get { return FloorIndex >= 0 && FloorIndex < Floors.Count ? Floors[FloorIndex] : null; } }
+        public int FloorNumber { get { return Mathf.Min(FloorIndex + 1, Floors.Count); } }
+        public int WaveCount { get { var f = CurrentFloor; return f != null ? f.waves.Count : 0; } }
+
+        public string FloorTitle(int floor)
+        {
+            if (floor < 0 || floor >= Floors.Count) return "";
+            var t = Floors[floor].title;
+            return string.IsNullOrEmpty(t) ? $"Floor {floor + 1}" : t;
         }
 
         readonly int[] ranks = new int[4];
@@ -98,8 +132,12 @@ namespace MidnightHour
         // Towers marked on the dismiss screen; they leave the field when it's confirmed.
         readonly HashSet<Tower> dismissMarks = new HashSet<Tower>();
         WaveSpawner spawner;
+        System.Action<List<Vector3>> applyLayout;
         AudioSource sfx;
         float allOutTimer;
+
+        static readonly Color SealGold = new Color(1f, 0.85f, 0.2f);
+        static readonly Color DangerRed = new Color(0.86f, 0.06f, 0.12f);
 
         void Awake()
         {
@@ -115,11 +153,14 @@ namespace MidnightHour
             Time.timeScale = 1f;
         }
 
-        public void Configure(List<EnemyDef> enemies, List<WaveDef> waves, WaveSpawner waveSpawner)
+        /// <param name="layout">Builds a floor's path and its visuals (null or under 2 points = the board's default path).</param>
+        public void Configure(List<EnemyDef> enemies, List<FloorDef> floors, WaveSpawner waveSpawner,
+                              System.Action<List<Vector3>> layout)
         {
             Enemies = enemies;
-            Waves = waves;
+            Floors = floors ?? new List<FloorDef>();
             spawner = waveSpawner;
+            applyLayout = layout;
             SP = startingSP;
             Time.timeScale = 1f;
         }
@@ -137,10 +178,18 @@ namespace MidnightHour
         {
             HandleKeys();
 
-            if (State == GameState.Night)
+            if (State == GameState.Battle)
             {
                 CheckAllOutAttack();
-                if (spawner != null && spawner.Done && Enemy.AliveCount == 0) WaveCleared();
+                if (WaveGapTimer > 0f)
+                {
+                    WaveGapTimer -= Time.deltaTime;
+                    if (WaveGapTimer <= 0f) BeginWave();
+                }
+                else if (spawner != null && spawner.Done && Enemy.AliveCount == 0)
+                {
+                    WaveCleared();
+                }
             }
         }
 
@@ -149,13 +198,13 @@ namespace MidnightHour
             if (InputCompat.Down(GameKey.StartNight))
             {
                 if (State == GameState.Briefing) BeginGame();
-                else if (State == GameState.Planning) StartNight();
+                else if (State == GameState.Planning) StartBattle();
+                else if (State == GameState.Scan) ContinueFromScan();
                 else if (State == GameState.PartySelect) ConfirmParty();
                 else if (State == GameState.Dismiss) ConfirmDismiss();
             }
 
-            // Keys 1-8 toggle members. Skip the frame the screen opened, so the key that closed
-            // Free Time (1-4) doesn't also toggle a member.
+            // Keys 1-8 toggle members. Skip the frame the screen opened, so the key that opened it can't also toggle.
             if (State == GameState.PartySelect && Time.frameCount != StateChangedFrame)
             {
                 for (int i = 0; i < PartyKeys.Length; i++)
@@ -167,14 +216,6 @@ namespace MidnightHour
             {
                 for (int i = 0; i < PartyKeys.Length; i++)
                     if (InputCompat.Down(PartyKeys[i])) ToggleDismiss(i);
-            }
-
-            if (State == GameState.FreeTime)
-            {
-                if (InputCompat.Down(GameKey.Tower1)) ChooseLink(SocialLink.Magician);
-                else if (InputCompat.Down(GameKey.Tower2)) ChooseLink(SocialLink.Empress);
-                else if (InputCompat.Down(GameKey.Tower3)) ChooseLink(SocialLink.Chariot);
-                // No Fool link: it gave +1 tower slot, and nothing may raise the field limit (#3).
             }
 
             if (InputCompat.Down(GameKey.Pause) && CanPlaceNow) TogglePause();
@@ -213,54 +254,108 @@ namespace MidnightHour
             ApplyTimeScale();
         }
 
-        // ------------------------------------------------------------ Flow
+        // ------------------------------------------------------------ Flow: floors and waves
 
         public void BeginGame()
         {
             ResetGame();
         }
 
-        public void StartNight()
+        /// <summary>Planning -> Battle: the floor's waves start, one after another.</summary>
+        public void StartBattle()
         {
-            if (State != GameState.Planning || WaveIndex >= Waves.Count || spawner == null) return;
-            SetState(GameState.Night);
-            spawner.Begin(Waves[WaveIndex], Enemies);
-            Banner("THE DARK HOUR", new Color(0.86f, 0.06f, 0.12f));
+            if (State != GameState.Planning || CurrentFloor == null || spawner == null) return;
+            SetState(GameState.Battle);
+            WaveInFloor = 0;
+            WaveGapTimer = 0f;
+            Banner("THE SHADOWS ARE COMING", DangerRed);
+            BeginWave();
+        }
+
+        void BeginWave()
+        {
+            WaveGapTimer = 0f;
+            var floor = CurrentFloor;
+            if (floor == null || WaveInFloor >= floor.waves.Count)
+            {
+                FloorCleared(); // a floor with no (more) waves breaks its seal right away
+                return;
+            }
+            spawner.Begin(floor.waves[WaveInFloor], Enemies);
+            if (floor.waves.Count > 1 && WaveInFloor > 0)
+                Banner($"WAVE {WaveInFloor + 1} / {floor.waves.Count}", DangerRed);
         }
 
         void WaveCleared()
         {
-            var wave = Waves[WaveIndex];
+            var floor = CurrentFloor;
+            var wave = floor.waves[WaveInFloor];
             SP += wave.clearBonus;
-            WaveIndex++;
-            if (WaveIndex >= Waves.Count)
+            WaveInFloor++;
+            if (WaveInFloor < floor.waves.Count)
             {
-                SetState(GameState.Victory);
-                Banner("DAWN BREAKS", new Color(1f, 0.85f, 0.2f));
-                PlaySfx(victorySound);
+                // More waves on this floor: short pause, then the next one.
+                WaveGapTimer = Mathf.Max(0.01f, wavePause);
+                Banner($"WAVE CLEARED  -  {floor.waves.Count - WaveInFloor} MORE", SealGold);
+                return;
             }
-            else
-            {
-                SetState(GameState.FreeTime);
-                Banner(wave.clearBonus > 0 ? $"NIGHT CLEARED  +{wave.clearBonus} SP" : "NIGHT CLEARED", new Color(1f, 0.85f, 0.2f));
-            }
+            FloorCleared();
         }
 
-        public void ChooseLink(SocialLink link)
+        /// <summary>Every wave on the floor is cleared: its seal breaks and the stairs up open.</summary>
+        void FloorCleared()
         {
-            if (State != GameState.FreeTime) return;
-            ranks[(int)link]++;
-            // The break between nights continues on the party screen, where members can be swapped.
-            SetState(GameState.PartySelect);
-            Banner($"{link.ToString().ToUpperInvariant()}  RANK {ranks[(int)link]}", new Color(1f, 0.85f, 0.2f));
+            if (spawner != null) spawner.Stop();
+            FloorIndex++;
+            WaveInFloor = 0;
+            WaveGapTimer = 0f;
+            if (FloorIndex >= Floors.Count)
+            {
+                SetState(GameState.Victory);
+                Banner("THE LAST SEAL BREAKS", SealGold);
+                PlaySfx(victorySound);
+                return;
+            }
+            ApplyFloorLayout();
+            ScanIsBreather = true;
+            SetState(GameState.Scan); // the breather on the stairs, with Fuuka's preview of the next floor
+            Banner("SEAL BROKEN", SealGold);
+        }
+
+        /// <summary>Scan screen -> next step: Planning on arrival at floor 1, the party screen at a breather.</summary>
+        public void ContinueFromScan()
+        {
+            if (State != GameState.Scan) return;
+            if (ScanIsBreather) SetState(GameState.PartySelect);
+            else EnterFloor();
+        }
+
+        /// <summary>Starts preparing the floor, unless the field is over its (lower) limit: then the dismiss screen comes first.</summary>
+        void EnterFloor()
+        {
+            if (TowerCount > FieldLimit)
+            {
+                dismissMarks.Clear();
+                SetState(GameState.Dismiss);
+                Banner("THE SEAL TIGHTENS", DangerRed);
+                return;
+            }
+            SetState(GameState.Planning);
+            Banner($"{FloorTitle(FloorIndex).ToUpperInvariant()}  -  THE STAIRS SEAL BEHIND YOU", Color.white);
+        }
+
+        void ApplyFloorLayout()
+        {
+            var floor = CurrentFloor;
+            if (applyLayout != null) applyLayout(floor != null ? floor.pathPoints : null);
         }
 
         public void EnemyReachedGoal(Enemy e)
         {
-            if (State != GameState.Night) return;
+            if (State != GameState.Battle) return;
             if (spawner != null) spawner.Stop();
             SetState(GameState.GameOver);
-            Banner("THE CLOCK TOWER HAS FALLEN", new Color(0.86f, 0.06f, 0.12f));
+            Banner("S.E.E.S. IS OVERRUN", DangerRed);
             PlaySfx(gameOverSound);
             if (CameraRig.Instance != null) CameraRig.Instance.Shake(0.8f);
         }
@@ -272,7 +367,7 @@ namespace MidnightHour
             PlaySfx(killSound, 0.5f);
         }
 
-        /// <summary>Wipes the board and starts again from Day 1 at the party screen (no scene reload needed).</summary>
+        /// <summary>Wipes the board and starts the climb again from floor 1 at the party screen (no scene reload needed).</summary>
         public void ResetGame()
         {
             if (spawner != null) spawner.Stop();
@@ -283,18 +378,53 @@ namespace MidnightHour
 
             for (int i = 0; i < ranks.Length; i++) ranks[i] = 0;
             SP = startingSP;
-            WaveIndex = 0;
+            FloorIndex = 0;
+            WaveInFloor = 0;
+            WaveGapTimer = 0f;
             Kills = 0;
             AllOutCount = 0;
             allOutTimer = 0f;
             IsPaused = false;
             GameSpeed = 1;
+            ApplyFloorLayout();
             // Like entering Tartarus: pick who goes in. Starting over means choosing the party again.
             party.Clear();
             dismissMarks.Clear();
             Towers = new List<TowerDef>();
             MemberTowerCount = 0;
             SetState(GameState.PartySelect);
+        }
+
+        // ------------------------------------------------------------ Fuuka's scan (from data)
+
+        public struct ScanEntry
+        {
+            public EnemyDef def;
+            public int count;
+        }
+
+        /// <summary>Every Shadow type on a floor, in order of first appearance, with how many come.</summary>
+        public List<ScanEntry> ScanFloor(int floor)
+        {
+            var list = new List<ScanEntry>();
+            if (floor < 0 || floor >= Floors.Count) return list;
+            foreach (var wave in Floors[floor].waves)
+                foreach (var g in wave.groups)
+                {
+                    if (g.enemyIndex < 0 || g.enemyIndex >= Enemies.Count || g.count <= 0) continue;
+                    var def = Enemies[g.enemyIndex];
+                    int at = list.FindIndex(x => x.def == def);
+                    if (at < 0) list.Add(new ScanEntry { def = def, count = g.count });
+                    else list[at] = new ScanEntry { def = def, count = list[at].count + g.count };
+                }
+            return list;
+        }
+
+        static int CountShadows(WaveDef wave)
+        {
+            int n = 0;
+            foreach (var g in wave.groups) n += Mathf.Max(0, g.count);
+            return n;
         }
 
         // ------------------------------------------------------------ Party (STORY.md §2)
@@ -309,8 +439,8 @@ namespace MidnightHour
         public int PartySizeRequired { get { return Mathf.Min(partySize, Members.Count); } }
         public int PartyCount { get { return party.Count; } }
         public bool CanConfirmParty { get { return State == GameState.PartySelect && party.Count == PartySizeRequired; } }
-        /// <summary>True before the climb starts; false at a break between nights.</summary>
-        public bool IsFirstPartySelect { get { return WaveIndex == 0; } }
+        /// <summary>True before the climb starts; false at a stairs breather.</summary>
+        public bool IsFirstPartySelect { get { return FloorIndex == 0; } }
 
         public bool IsInParty(PartyMember id) { return party.Contains(id); }
 
@@ -364,21 +494,14 @@ namespace MidnightHour
                 if (t != null && t.Def != null && !CanStayOnField(t.Def)) RemoveTower(t);
             if (TowerPlacer.Instance != null) TowerPlacer.Instance.Cancel();
 
-            EnterFloor();
-        }
-
-        /// <summary>Starts preparing the floor, unless the field is over its (lower) limit: then the dismiss screen comes first.</summary>
-        void EnterFloor()
-        {
-            if (TowerCount > FieldLimit)
+            if (IsFirstPartySelect)
             {
-                dismissMarks.Clear();
-                SetState(GameState.Dismiss);
-                Banner("THE SEAL TIGHTENS", new Color(0.86f, 0.06f, 0.12f));
+                // Before the climb: arrive at floor 1. The stairs seal, and Fuuka scans the floor.
+                ScanIsBreather = false;
+                SetState(GameState.Scan);
                 return;
             }
-            SetState(GameState.Planning);
-            if (WaveIndex < Waves.Count) Banner(Waves[WaveIndex].title.ToUpperInvariant(), Color.white);
+            EnterFloor();
         }
 
         // ------------------------------------------------------------ Field limit (STORY.md §2)
@@ -390,7 +513,7 @@ namespace MidnightHour
         }
 
         /// <summary>The limit on the floor before this one (equal to FieldLimit on the first floor).</summary>
-        public int PreviousFieldLimit { get { return LimitForFloor(WaveIndex - 1); } }
+        public int PreviousFieldLimit { get { return LimitForFloor(FloorIndex - 1); } }
 
         public bool IsOnField(TowerDef def)
         {
@@ -462,7 +585,7 @@ namespace MidnightHour
             RemoveTower(t);
         }
 
-        // ------------------------------------------------------------ Social Links
+        // ------------------------------------------------------------ Social Links (no longer ranked; #14 removes them)
 
         public int Rank(SocialLink link) { return ranks[(int)link]; }
 
@@ -504,7 +627,7 @@ namespace MidnightHour
 
             allOutTimer = allOutCooldown;
             AllOutCount++;
-            Banner("ALL-OUT ATTACK!", new Color(0.86f, 0.06f, 0.12f));
+            Banner("ALL-OUT ATTACK!", DangerRed);
             PlaySfx(allOutSound);
             if (CameraRig.Instance != null) CameraRig.Instance.Shake(0.5f);
 

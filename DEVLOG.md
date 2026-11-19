@@ -26,6 +26,38 @@ Template: copy this block for each session.
 
 ---
 
+## 2026-11-18: #4 Floor progression
+**Time spent:** _(fill in)_
+**Goal:** replace nights and Free Time with six sealed floors of Tartarus: arrive, Fuuka's scan, deploy, the floor's waves, seal broken, the stairs breather, the next floor.
+
+### Done
+- Merged PR #23 (#3) after testing. Bond decisions added to STORY.md and #14: Fuuka can be chosen at the breather and boosts Sarasvati, and Orpheus grows each time a floor is cleared.
+- **Floors:** new `FloorDef` (title, several `WaveDef`s, optional `pathPoints`), with `floors` on the GameBootstrap Inspector replacing `waves`. The six default floors have two waves each and still use the starter Shadows, until #5 brings the Tziah I roster and #12 the Jailer.
+- **Flow** (`GameState.Night` became `Battle`, and `Scan` is new):
+  - Floor 1: Briefing → party → **arrival** ("the stairs seal behind S.E.E.S.", with Fuuka's scan) → deploy → waves (a short pause between waves, so towers can still be placed) → **SEAL BROKEN**.
+  - Floors 2-6: **the stairs breather** (Fuuka's scan of the next floor) → party swap → dismiss if over the new limit → deploy.
+  - Floor 6 cleared means victory ("THE LAST SEAL BREAKS"), and the first Shadow through means defeat ("S.E.E.S. IS OVERRUN").
+- **Fuuka's scan** is generated from the floor's waves: every Shadow type with its count, HP, speed, BOSS / FAST / FLYING tags, and coloured WEAK / RESISTS lists. The header shows the wave count and the field limit.
+- **Per-floor paths:** `GameBootstrap.ApplyFloorLayout` rebuilds the spline, the path strip, the spawn portal and the goal when a floor defines its own points. Otherwise the board's default path is used.
+- **Free Time removed entirely:** the screen, the "after school" line, and all Free Time / day / night / dawn / Clock Tower wording, including the briefing text. The Social Link pick went with it, and the rest of the Social Links are removed in #14.
+- The field limit now follows the floor number.
+- README: the premise line, the "game ends" requirement row, the floors A+ bullet and the controls.
+
+### Problems & fixes
+- `ShadowsRemaining` had to count the waves still queued on the floor, not only the current one, so the HUD doesn't show 0 between waves.
+- A floor with no waves would have stalled the battle. It now breaks its seal immediately.
+
+### AI prompts that mattered
+- "Then start the next M1 issue and stop at the PR."
+
+### Next
+- [ ] Test the PR for #4 in Unity (checklist in the PR)
+- [ ] Open question: what happens to placed towers when a floor has its own path?
+- [ ] Open question: STORY.md says towers go on "fixed spots" around the team. Should that get its own issue?
+- [ ] #5 Tziah I Shadow roster and floor waves
+
+---
+
 ## 2026-11-18: #3 Field limit per floor
 **Time spent:** _(fill in)_
 **Goal:** placing is free; the only limit is the Jailer's field limit (8, 7, 6, 6, 5, 4), with each Persona on the field once and a dismiss screen when a floor's limit drops.

@@ -143,7 +143,7 @@ namespace MidnightHour
                 case GameState.Briefing: DrawBriefing(gm); break;
                 case GameState.PartySelect: DrawPartySelect(gm); break;
                 case GameState.Dismiss: DrawDismiss(gm); break;
-                case GameState.FreeTime: DrawFreeTime(gm); break;
+                case GameState.Scan: DrawScan(gm); break;
                 case GameState.Victory: DrawEnd(gm, true); break;
                 case GameState.GameOver: DrawEnd(gm, false); break;
             }
@@ -328,26 +328,30 @@ namespace MidnightHour
                 Fill(panel, Panel);
                 Fill(new Rect(panel.x, panel.yMax - 8, panel.width, 8), Red);
 
-                string day = gm.WaveIndex < gm.Waves.Count ? gm.Waves[gm.WaveIndex].title : "Dawn";
-                Text(new Rect(36, 26, 500, 40), day.ToUpperInvariant(), sHeader, White);
+                string floorTitle = gm.CurrentFloor != null ? gm.FloorTitle(gm.FloorIndex) : "Tartarus";
+                Text(new Rect(36, 26, 500, 40), floorTitle.ToUpperInvariant(), sHeader, White);
 
                 string phase;
                 switch (gm.State)
                 {
-                    case GameState.Night: phase = "THE DARK HOUR"; break;
-                    case GameState.Planning: phase = "PREPARATION - place towers, then begin the night"; break;
-                    case GameState.FreeTime: phase = "FREE TIME"; break;
+                    case GameState.Battle:
+                        phase = gm.WaveGapTimer > 0f
+                            ? $"BATTLE - next wave in {Mathf.CeilToInt(gm.WaveGapTimer)}s"
+                            : $"BATTLE - wave {gm.WaveInFloor + 1} of {gm.WaveCount}";
+                        break;
+                    case GameState.Planning: phase = "DEPLOY - place towers, then face the Shadows"; break;
+                    case GameState.Scan: phase = gm.ScanIsBreather ? "THE STAIRS - a short breather" : "ARRIVAL - Fuuka scans the floor"; break;
                     case GameState.PartySelect: phase = "PARTY - choose who climbs with Makoto"; break;
                     case GameState.Dismiss: phase = "THE SEAL TIGHTENS - dismiss towers"; break;
-                    case GameState.Victory: phase = "VICTORY"; break;
-                    case GameState.GameOver: phase = "GAME OVER"; break;
+                    case GameState.Victory: phase = "ALL SEALS BROKEN"; break;
+                    case GameState.GameOver: phase = "OVERRUN"; break;
                     default: phase = ""; break;
                 }
                 Text(new Rect(36, 64, 500, 28), phase, sSmall, Red);
                 Text(new Rect(36, 92, 500, 30),
                      $"SP {gm.SP}     FIELD {gm.TowerCount}/{gm.FieldLimit}     SHADOWS {gm.ShadowsRemaining}", sBody, White);
                 Text(new Rect(36, 122, 500, 26),
-                     $"Night {Mathf.Min(gm.WaveIndex + 1, gm.Waves.Count)} of {gm.Waves.Count}     Defeated {gm.Kills}", sSmall, Gold);
+                     $"Floor {gm.FloorNumber} of {gm.Floors.Count}     Defeated {gm.Kills}", sSmall, Gold);
             });
         }
 
@@ -570,7 +574,7 @@ namespace MidnightHour
         void DrawStartButton(GameManager gm)
         {
             Rect r = new Rect((W - 500f) * 0.5f, LayoutBar(gm).startY, 500f, 60f);
-            if (Button(r, ">>  BEGIN THE DARK HOUR   [Enter]", Red, White)) gm.StartNight();
+            if (Button(r, ">>  FACE THE SHADOWS   [Enter]", Red, White)) gm.StartBattle();
         }
 
         void DrawBanner()
@@ -612,16 +616,16 @@ namespace MidnightHour
 
             const float w = 980f;
             string story =
-                "When the clock strikes midnight, Seiran Academy twists into a labyrinth and the Shadows " +
-                "march toward the Clock Tower. If even ONE of them reaches it, the Midnight Hour never ends.\n\n" +
-                "Summon towers beside the path to stop them. Every Shadow has a weakness (its glowing eyes): " +
-                "hit it to knock the Shadow DOWN and earn your tower ONE MORE shot. Knock them all down at once " +
-                "for an ALL-OUT ATTACK. Between nights, spend your free time ranking up Social Links.\n\n" +
-                "Survive six nights, including the Full Moon, to see the dawn.";
+                "S.E.E.S. is climbing Tartarus, through the Tziah block. Partway up, the stairs seal shut behind " +
+                "and ahead: a powerful Shadow higher up has locked the floors and is sending its Shadows to wear the team down.\n\n" +
+                "Deploy Personas around the team's position to hold out. Every Shadow has a weakness (its glowing eyes): " +
+                "hit it to knock the Shadow DOWN and earn that tower ONE MORE shot. Knock them all down at once for an " +
+                "ALL-OUT ATTACK. Clear every wave on a floor to break its seal and climb on.\n\n" +
+                "Break all six seals. If a single Shadow reaches the team, S.E.E.S. is overrun.";
             Text(new Rect((W - w) * 0.5f, 400f, w, 300f), story, sCenter, White);
 
             if (Button(new Rect((W - 380f) * 0.5f, 760f, 380f, 72f), "START   [Enter]", Red, White)) gm.BeginGame();
-            Text(new Rect(0f, 860f, W, 30f), "1-3 party Persona  -  4 Makoto's Personas  -  Left-click place  -  Right-click cancel  -  Enter start night  -  Space pause  -  F speed",
+            Text(new Rect(0f, 860f, W, 30f), "1-3 party Persona  -  4 Makoto's Personas  -  Left-click place  -  Right-click cancel  -  Enter continue / face the Shadows  -  Space pause  -  F speed",
                  sCenter, Grey);
         }
 
@@ -630,7 +634,7 @@ namespace MidnightHour
             Dim();
             bool first = gm.IsFirstPartySelect;
             int need = gm.PartySizeRequired;
-            string next = gm.WaveIndex < gm.Waves.Count ? gm.Waves[gm.WaveIndex].title : "";
+            string next = gm.FloorTitle(gm.FloorIndex);
             Slanted(-3f, new Vector2(W * 0.5f, 150f), () =>
             {
                 Fill(new Rect(-100f, 90f, W + 200f, 120f), Red);
@@ -680,7 +684,7 @@ namespace MidnightHour
                                          : $"Party: {count} / {need}   -   full. Click a member to take them out.";
             Text(new Rect(0f, infoY, W, 30f), status, sCenter, count == need ? Gold : White);
 
-            // Field limit for the coming night (it only ever drops).
+            // Field limit for the coming floor (it only ever drops).
             var leaving = first ? new List<string>() : gm.TowersLeavingField();
             int limit = gm.FieldLimit, prev = gm.PreviousFieldLimit, after = gm.TowerCount - leaving.Count;
             string limitText;
@@ -755,42 +759,82 @@ namespace MidnightHour
             Text(new Rect(0f, btn.yMax + 18f, W, 30f), "Press 1-8 or click a tower to mark or unmark it.   Enter to confirm.", sCenter, Grey);
         }
 
-        void DrawFreeTime(GameManager gm)
+        /// <summary>
+        /// Fuuka's scan of a floor, generated from its waves: every Shadow type, how many come, and their
+        /// weaknesses and resistances. Shown on arrival at floor 1, and at every stairs breather for the floor ahead.
+        /// </summary>
+        void DrawScan(GameManager gm)
         {
             Dim();
-            Slanted(-3f, new Vector2(W * 0.5f, 170f), () =>
+            bool breather = gm.ScanIsBreather;
+            int floor = gm.FloorIndex;
+            string floorTitle = gm.FloorTitle(floor);
+            Slanted(-3f, new Vector2(W * 0.5f, 150f), () =>
             {
-                Fill(new Rect(-100f, 110f, W + 200f, 120f), Red);
-                Text(new Rect(0f, 118f, W, 70f), "FREE TIME", sBanner, White);
-                Text(new Rect(0f, 186f, W, 34f), "After school... who will you spend the day with?", sCenter, White);
+                Fill(new Rect(-100f, 90f, W + 200f, 120f), Red);
+                Text(new Rect(0f, 98f, W, 70f), breather ? "THE STAIRS" : floorTitle.ToUpperInvariant(), sBanner, White);
+                Text(new Rect(0f, 166f, W, 34f),
+                     breather ? $"The seal is broken. A short breather before {floorTitle}, while Fuuka scans ahead."
+                              : "The stairs seal behind S.E.E.S. Fuuka scans the floor.",
+                     sCenter, White);
             });
 
-            var gold = new Color(1f, 0.85f, 0.2f);
-            string[] titles =
-            {
-                $"[1] MAGICIAN   Rank {gm.Rank(SocialLink.Magician)} > {gm.Rank(SocialLink.Magician) + 1}",
-                $"[2] EMPRESS    Rank {gm.Rank(SocialLink.Empress)} > {gm.Rank(SocialLink.Empress) + 1}",
-                $"[3] CHARIOT    Rank {gm.Rank(SocialLink.Chariot)} > {gm.Rank(SocialLink.Chariot) + 1}",
-            };
-            int dmgPct = Mathf.RoundToInt(gm.rankDamageBonus * 100f);
-            int ratePct = Mathf.RoundToInt(gm.rankFireRateBonus * 100f);
-            string[] bodies =
-            {
-                $"Fire towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe kid who never shuts up about fire.",
-                $"Ice towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe student council president. Ice cold.",
-                $"Elec towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nYour rival from the track team.",
-            };
-            Color[] accents = { ElementInfo.GetColor(Element.Fire), ElementInfo.GetColor(Element.Ice), ElementInfo.GetColor(Element.Elec) };
+            var scan = gm.ScanFloor(floor);
+            int waves = floor < gm.Floors.Count ? gm.Floors[floor].waves.Count : 0;
+            const float rowH = 58f, headH = 56f;
+            float w = Mathf.Min(1120f, W - 80f);
+            Rect panel = new Rect((W - w) * 0.5f, 240f, w, headH + Mathf.Max(1, scan.Count) * rowH + 14f);
+            Block(panel);
+            Fill(panel, Panel);
+            Fill(new Rect(panel.x, panel.y, panel.width, 5), Gold);
+            Text(new Rect(panel.x + 20, panel.y + 14, w - 40, 30),
+                 $"FUUKA'S SCAN   ·   {floorTitle}   ·   {waves} wave{(waves == 1 ? "" : "s")}   ·   field limit {gm.LimitForFloor(floor)}",
+                 sCardTitle, Gold);
 
-            const float gap = 24f, ch = 150f;
-            float cw = Mathf.Min(470f, (W - 80f - 2f * gap) / 3f);
-            float x0 = (W - (cw * 3f + gap * 2f)) * 0.5f;
-            for (int i = 0; i < 3; i++)
+            float y = panel.y + headH;
+            if (scan.Count == 0)
+                Text(new Rect(panel.x + 20, y + 16, w - 40, 26), "No Shadows detected.", sSmall, Grey);
+            float nameW = w * 0.26f, statW = w * 0.2f, weakW = w * 0.3f;
+            foreach (var entry in scan)
             {
-                Rect r = new Rect(x0 + i * (cw + gap), 300f, cw, ch);
-                if (Card(r, titles[i], bodies[i], accents[i], false)) gm.ChooseLink((SocialLink)i);
+                var d = entry.def;
+                float x = panel.x + 20;
+                Fill(new Rect(panel.x + 12, y + 4, w - 24, rowH - 8), new Color(1f, 1f, 1f, 0.04f));
+                Fill(new Rect(x, y + 12, 10, rowH - 24), d.IsBoss ? Red : ElementInfo.GetColor(d.PrimaryWeakness));
+                string tags = (d.IsBoss ? "  BOSS" : "") +
+                              (d.movement == ShadowMovement.Fast ? "  FAST" : d.movement == ShadowMovement.Flying ? "  FLYING" : "");
+                Text(new Rect(x + 22, y + 8, nameW - 30, 24), d.displayName, sCardTitle, White);
+                Text(new Rect(x + 22, y + 32, nameW - 30, 20), $"x{entry.count}{tags}", sMini, d.IsBoss ? new Color(1f, 0.45f, 0.45f) : Grey);
+                Text(new Rect(x + nameW, y + 18, statW, 22), $"HP {d.maxHP:0}   ·   {d.speed:0.#} m/s", sSmall, new Color(0.88f, 0.88f, 0.9f));
+                AffinityChips(new Rect(x + nameW + statW, y + 8, weakW - 10, 44), "WEAK", d.weaknesses, Gold);
+                AffinityChips(new Rect(x + nameW + statW + weakW, y + 8, w - (nameW + statW + weakW) - 40, 44), "RESISTS", d.resists, Grey);
+                y += rowH;
             }
-            Text(new Rect(0f, 300f + ch + 30f, W, 30f), "Press 1-3 or click a card.", sCenter, gold);
+
+            Rect btn = new Rect((W - 460f) * 0.5f, panel.yMax + 28f, 460f, 68f);
+            if (Button(btn, breather ? "TO THE PARTY   [Enter]" : "DEPLOY   [Enter]", Red, White)) gm.ContinueFromScan();
+            Text(new Rect(0f, btn.yMax + 16f, W, 30f),
+                 breather ? "Next: swap party members if you want, then deploy on the new floor." : "Next: deploy your Personas around the team.",
+                 sCenter, Grey);
+        }
+
+        /// <summary>"WEAK" / "RESISTS" label with one coloured element name per entry (or "none").</summary>
+        void AffinityChips(Rect r, string label, List<Element> elements, Color labelColor)
+        {
+            Text(new Rect(r.x, r.y, r.width, 18), label, sMini, labelColor);
+            float x = r.x;
+            int shown = 0;
+            if (elements != null)
+                foreach (var e in elements)
+                {
+                    if (!ElementInfo.HasAffinity(e)) continue;
+                    string t = ElementInfo.Label(e);
+                    float tw = sMini.CalcSize(new GUIContent(t)).x;
+                    Text(new Rect(x, r.y + 20, tw + 4, 20), t, sMini, ElementInfo.GetColor(e));
+                    x += tw + 14f;
+                    shown++;
+                }
+            if (shown == 0) Text(new Rect(x, r.y + 20, 80, 20), "none", sMini, Grey);
         }
 
         void DrawEnd(GameManager gm, bool won)
@@ -799,12 +843,12 @@ namespace MidnightHour
             Slanted(-4f, new Vector2(W * 0.5f, 330f), () =>
             {
                 Fill(new Rect(-100f, 250f, W + 200f, 160f), won ? Gold : Red);
-                Text(new Rect(0f, 255f, W, 150f), won ? "DAWN BREAKS" : "THE MIDNIGHT HOUR NEVER ENDS",
+                Text(new Rect(0f, 255f, W, 150f), won ? "THE LAST SEAL BREAKS" : "S.E.E.S. IS OVERRUN",
                      won ? sTitleCenter : sBanner, won ? new Color(0.05f, 0.05f, 0.05f) : White, !won);
             });
             string stats = won
-                ? $"You survived all {gm.Waves.Count} nights.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}"
-                : $"A Shadow reached the Clock Tower on {(gm.WaveIndex < gm.Waves.Count ? gm.Waves[gm.WaveIndex].title : "the last night")}.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}";
+                ? $"S.E.E.S. broke all {gm.Floors.Count} seals.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}"
+                : $"A Shadow broke through to the team on {gm.FloorTitle(gm.FloorIndex)}. S.E.E.S. retreats from Tartarus.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}";
             Text(new Rect(0f, 470f, W, 80f), stats, sCenter, White);
             if (Button(new Rect((W - 380f) * 0.5f, 600f, 380f, 72f), won ? "PLAY AGAIN   [R]" : "TRY AGAIN   [R]", Red, White))
                 gm.ResetGame();

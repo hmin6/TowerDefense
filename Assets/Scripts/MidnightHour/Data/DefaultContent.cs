@@ -170,22 +170,41 @@ namespace MidnightHour
             return new SpawnGroup { enemyIndex = enemy, count = count, interval = interval, delayBefore = delay };
         }
 
-        public static List<WaveDef> Waves()
+        static WaveDef W(int clearBonus, params SpawnGroup[] groups)
         {
-            return new List<WaveDef>
+            var w = new WaveDef { title = "Wave", clearBonus = clearBonus };
+            w.groups.AddRange(groups);
+            return w;
+        }
+
+        static FloorDef F(int number, params WaveDef[] waves)
+        {
+            var f = new FloorDef { title = $"Floor {number}" };
+            f.waves.AddRange(waves);
+            for (int i = 0; i < f.waves.Count; i++) f.waves[i].title = $"Floor {number} - wave {i + 1}";
+            return f;
+        }
+
+        /// <summary>
+        /// Six sealed floors (STORY.md §3), each with two waves. Every floor uses the board's default path.
+        /// The Shadows are still the starter kit's until the Tziah I roster (#5) and the Jailer (#12) replace them.
+        /// </summary>
+        public static List<FloorDef> Floors()
+        {
+            return new List<FloorDef>
             {
-                new WaveDef { title = "Day 1 - First Night", clearBonus = 75,
-                    groups = { G(Mask, 8, 1.1f) } },
-                new WaveDef { title = "Day 2 - Slime Season", clearBonus = 100,
-                    groups = { G(Mask, 6, 0.9f), G(Slime, 4, 1.6f, 2f) } },
-                new WaveDef { title = "Day 3 - Iron Footsteps", clearBonus = 100,
-                    groups = { G(Slime, 6, 1.2f), G(Knight, 2, 3f, 1f), G(Mask, 8, 0.5f, 2f) } },
-                new WaveDef { title = "Day 4 - Mixed Company", clearBonus = 125,
-                    groups = { G(Knight, 4, 2.2f), G(Mask, 10, 0.45f, 1.5f), G(Slime, 6, 1f, 1.5f) } },
-                new WaveDef { title = "Day 5 - The Swarm", clearBonus = 150,
-                    groups = { G(Mask, 12, 0.4f), G(Knight, 6, 1.6f, 2f), G(Slime, 10, 0.7f, 1f) } },
-                new WaveDef { title = "FULL MOON", clearBonus = 0,
-                    groups = { G(Mask, 10, 0.4f), G(Knight, 5, 1.5f, 1f), G(Reaper, 1, 1f, 3f), G(Slime, 8, 1.2f, 2f) } },
+                F(1, W(25, G(Mask, 5, 1.1f)),
+                     W(50, G(Mask, 6, 0.9f))),
+                F(2, W(25, G(Mask, 6, 0.9f)),
+                     W(75, G(Slime, 4, 1.6f), G(Mask, 4, 0.8f, 2f))),
+                F(3, W(25, G(Slime, 6, 1.2f)),
+                     W(75, G(Knight, 2, 3f), G(Mask, 8, 0.5f, 2f))),
+                F(4, W(50, G(Knight, 4, 2.2f), G(Mask, 6, 0.5f, 1.5f)),
+                     W(75, G(Mask, 6, 0.45f), G(Slime, 6, 1f, 1.5f))),
+                F(5, W(50, G(Mask, 12, 0.4f)),
+                     W(100, G(Knight, 6, 1.6f), G(Slime, 10, 0.7f, 1f))),
+                F(6, W(50, G(Mask, 10, 0.4f), G(Knight, 5, 1.5f, 1f)),
+                     W(0, G(Reaper, 1, 1f, 1f), G(Slime, 8, 1.2f, 2f))),
             };
         }
 
