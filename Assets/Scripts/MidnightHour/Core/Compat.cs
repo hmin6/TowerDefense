@@ -9,7 +9,8 @@ namespace MidnightHour
     public enum GameKey
     {
         Tower1, Tower2, Tower3, Choice4, Cancel, Sell, StartNight, Pause, Speed,
-        AimMode, AimLines, Help, Restart, PanUp, PanDown, PanLeft, PanRight
+        AimMode, AimLines, Help, Restart, PanUp, PanDown, PanLeft, PanRight,
+        Choice5, Choice6, Choice7, Choice8   // party select: members 5-8
     }
 
     /// <summary>
@@ -38,6 +39,10 @@ namespace MidnightHour
             new[] { Key.S, Key.DownArrow },        // PanDown
             new[] { Key.A, Key.LeftArrow },        // PanLeft
             new[] { Key.D, Key.RightArrow },       // PanRight
+            new[] { Key.Digit5, Key.Numpad5 },     // Choice5
+            new[] { Key.Digit6, Key.Numpad6 },     // Choice6
+            new[] { Key.Digit7, Key.Numpad7 },     // Choice7
+            new[] { Key.Digit8, Key.Numpad8 },     // Choice8
         };
 
         public static bool Down(GameKey k)
@@ -101,6 +106,10 @@ namespace MidnightHour
             new[] { KeyCode.S, KeyCode.DownArrow },
             new[] { KeyCode.A, KeyCode.LeftArrow },
             new[] { KeyCode.D, KeyCode.RightArrow },
+            new[] { KeyCode.Alpha5, KeyCode.Keypad5 },
+            new[] { KeyCode.Alpha6, KeyCode.Keypad6 },
+            new[] { KeyCode.Alpha7, KeyCode.Keypad7 },
+            new[] { KeyCode.Alpha8, KeyCode.Keypad8 },
         };
 
         public static bool Down(GameKey k)

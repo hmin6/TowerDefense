@@ -82,10 +82,10 @@ namespace MidnightHour
             }
         }
 
-        /// <summary>Short HUD label, for example "FIRE (Agi)" or "PIERCE".</summary>
+        /// <summary>Short HUD label, for example "FIRE (Agi)", "PIERCE", or "NEUTRAL" for no element.</summary>
         public static string Label(Element e)
         {
-            if (e == Element.None) return "none";
+            if (e == Element.None) return "NEUTRAL";
             string family = SpellFamily(e);
             string name = e.ToString().ToUpperInvariant();
             return family.Length > 0 ? $"{name} ({family})" : name;

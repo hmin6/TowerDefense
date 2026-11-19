@@ -12,39 +12,6 @@ namespace MidnightHour
         // Indices used by the waves below.
         public const int Mask = 0, Slime = 1, Knight = 2, Reaper = 3;
 
-        public static List<TowerDef> Towers()
-        {
-            return new List<TowerDef>
-            {
-                new TowerDef
-                {
-                    displayName = "Zio Spark",
-                    description = "Starter tower. Low, rapid lightning darts. Shreds Masks.",
-                    element = Element.Elec, cost = 100,
-                    fireRate = 3.0f, projectileSpeed = 30f, damage = 8f, range = 7f, height = 1.2f,
-                    projectileScale = 0.25f, color = new Color(1f, 0.85f, 0.15f)
-                },
-                new TowerDef
-                {
-                    displayName = "Bufu Frost",
-                    description = "Starter tower. Mid height, ice shards slow Shadows by 50%.",
-                    element = Element.Ice, cost = 125,
-                    fireRate = 1.1f, projectileSpeed = 16f, damage = 14f, range = 8.5f, height = 2.4f,
-                    slowMultiplier = 0.5f, slowDuration = 2f,
-                    projectileScale = 0.35f, color = new Color(0.4f, 0.85f, 1f)
-                },
-                new TowerDef
-                {
-                    displayName = "Agi Inferno",
-                    description = "Starter tower. Tall, lobs fireballs on a gravity arc. Splash.",
-                    element = Element.Fire, cost = 175,
-                    fireRate = 0.55f, projectileSpeed = 9f, damage = 38f, range = 11f, height = 4.0f,
-                    ballistic = true, splashRadius = 2.2f,
-                    projectileScale = 0.55f, color = new Color(1f, 0.42f, 0.1f)
-                },
-            };
-        }
-
         public static List<EnemyDef> Enemies()
         {
             return new List<EnemyDef>

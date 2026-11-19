@@ -35,6 +35,31 @@ namespace MidnightHour
     /// <summary>Normal Shadow, a floor finale (Arcane Turret, Sleeping Table), the final boss, or a treasure Shadow.</summary>
     public enum ShadowRank { Normal, FloorBoss, Boss, Treasure }
 
+    /// <summary>Readable names for the UI.</summary>
+    public static class DefInfo
+    {
+        public static string RoleLabel(TowerRole r)
+        {
+            switch (r)
+            {
+                case TowerRole.TankBuster: return "Tank buster";
+                case TowerRole.SupportAura: return "Support aura";
+                case TowerRole.ChainLightning: return "Chain lightning";
+                case TowerRole.SpBattery: return "SP battery";
+                case TowerRole.LastLine: return "Last line of defense";
+                case TowerRole.AntiAir: return "Anti-air";
+                case TowerRole.ResistanceBreaker: return "Resistance breaker";
+                case TowerRole.None: return "";
+                default: return r.ToString();
+            }
+        }
+
+        public static string ArcanaLabel(Arcana a)
+        {
+            return a == Arcana.HangedMan ? "Hanged Man" : a == Arcana.None ? "" : a.ToString();
+        }
+    }
+
     /// <summary>All stats for one tower type: a Persona. Edit these in the Inspector on the GameBootstrap object.</summary>
     [System.Serializable]
     public class TowerDef
