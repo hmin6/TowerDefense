@@ -28,7 +28,7 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 - **Proposed:** you can **swap members at the break between floors**. Fuuka previews the next floor's Shadows, so you can adjust the party to counter them.
 
 ### Towers: who places what
-- **Placing a tower is free.** The only limit is how many towers can be on the field at once.
+- **Placing a Persona costs its owner SP**, and each Persona has its own placement cost (see "Skills and SP"). The field limit caps how many towers can be on the field at once.
 - **Each party member places one tower**: their own Persona.
 - **Makoto is the Wild Card.** He can place **any of his Personas, as many as the field limit allows**, but each Persona only once. There's no limit specific to Makoto.
 - **Every tower has its own role**, with no overlaps (see section 5).
@@ -54,13 +54,22 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 ### Skills and SP: each member's signature move
 - Every deployed member has a **signature skill** you trigger yourself: click their skill button, then click where to use it.
 - **SP is individual.** Each party member has their own SP. **Makoto has one pool shared by all his Personas.**
-- A Persona on the field **drains its owner's SP over time**, and skills also cost the owner's SP. Each skill has a **cooldown** after use.
-- At **0 SP**, that Persona is unsummoned and the member **rests**. SP regenerates slowly while off the field, and partly at the stairs breather.
-- **Hitting a weakness** restores a little SP to the attacker.
+- SP is spent only when **placing a Persona** (each Persona has its own placement cost) and when **using a skill**. Each skill has a **cooldown** after use.
+- There's **no drain over time**. A placed Persona stays on the field even if its owner's SP hits 0. At **0 SP**, that member can't place their Persona or use skills until they regain SP.
+- SP comes back from:
+  - **weakness hits:** a little, to the attacker
+  - **Thoth:** while he's on the field, he regenerates SP for every party member
+  - **the Opulent Hand:** SP to every party member, Makoto included
+
+  **Kills give no SP.**
+- **Proposed:** a small SP top-up for everyone at the stairs breather between floors.
+- There's no separate game-over rule for SP. If nobody can afford to place anything, the normal loss happens when the Shadows reach the team. If nobody can place at the start of a floor, Fuuka warns: **"S.E.E.S. is out of SP!"**
 - **Proposed:** only the **members** have signature skills. **Makoto** has one skill of his own: **Persona Swap**, which instantly swaps one of his placed Personas for another (the Wild Card). His Personas don't have separate skills, which keeps the number of buttons sensible.
 - **Numbers (all to tune in playtesting):**
-  - **SP per member:** maximum, drain rate on the field, regeneration while off the field, and the partial refill at the breather.
+  - **SP per member:** starting SP and maximum.
+  - **Placement cost** of each Persona.
   - **SP from a weakness hit:** a little, to the attacker.
+  - **Thoth's regeneration rate**, the **Opulent Hand's bonus**, and the **breather top-up** (proposed).
   - **Skills:** cost 20-50 SP, with 10-30 second cooldowns.
 
 ### On each floor
@@ -71,7 +80,7 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 5. You use skills at the right moments (hitting a weakness knocks Shadows down; knock them all down for an **All-Out Attack**).
 6. Clearing every wave breaks the seal on the stairs up.
 
-**Floor 1 is a guided tutorial**, with Fuuka's lines: placing towers, weaknesses, SP drain and skills.
+**Floor 1 is a guided tutorial**, with Fuuka's lines: placing towers, weaknesses, SP costs and skills.
 
 ### Between floors
 - There's a short breather on the stairs. You talk with one party member, which gives a small boost to their Persona's stats. Personas stay in their base forms.
@@ -104,7 +113,7 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 
 **How "fast" and "flying" are decided:** *Persona 3*'s battles are turn-based, so Shadows don't have a speed or a flying type. For the tower defense, they're assigned by how each Shadow looks: Drives and Wheels are vehicles, so they're fast; Tiaras and Idols float, so they fly.
 
-**Optional extra:** the **Opulent Hand** (a rare treasure Shadow in Tziah I) could show up now and then and run for the exit. Defeat it before it escapes for a big SP bonus.
+**Optional extra:** the **Opulent Hand** (a rare treasure Shadow in Tziah I) could show up now and then and run for the exit. Defeat it before it escapes, and every party member, Makoto included, gets SP.
 
 **Weaknesses (original *Persona 3*, Tziah I):**
 
@@ -168,7 +177,7 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 | Jack Frost | Magician (Junpei) | Bufu | **Trapper** | Plants frost mines on the path that burst when Shadows step on them |
 | Sarasvati | Priestess (Fuuka) | Neutral | **Support aura** | Makes nearby towers fire faster |
 | Oberon | Emperor (Akihiko) | Zio | **Chain lightning** | Each hit jumps to several more Shadows |
-| Thoth | Hierophant (Shinjiro) | Agi | **SP battery** | Generates team SP over time, fitting for the god of knowledge |
+| Thoth | Hierophant (Shinjiro) | Agi | **SP battery** | While he's on the field, regenerates SP for every party member, fitting for the god of knowledge |
 | Shiisaa | Hierophant (Shinjiro) | Strike | **Last line of defense** | Short range, but very heavy damage to any Shadow that gets close to the team |
 | Thor | Chariot (Aigis) | Zio | **Anti-air** | Heavy damage to flying Shadows |
 | Melchizedek | Justice (Ken) | Hama | **Pulse** | Damages every Shadow around it every few seconds, with no projectile |
@@ -210,8 +219,10 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 - [x] Shiisaa as last line of defense (proposed)
 - [x] Skills: members only, plus Persona Swap for Makoto (proposed)
 - [x] Skill resource: individual SP per member (Makoto's Personas share one pool), replacing the shared team pool
-- [x] Tower cost: placing is free
+- [x] Tower cost: each Persona costs its owner's SP to place (no drain over time)
 - [x] SP starting numbers (proposed; tuned in playtesting)
+- [x] SP returns from weakness hits, Thoth and the Opulent Hand; kills give no SP; no separate out-of-SP game over
+- [ ] SP top-up at the stairs breather (proposed)
 - [x] Suppression stays; no way to win slots back
 - [x] Setting: Tziah I (original *Persona 3*), floors 114-138
 - [x] Six floors with the Tziah I Shadow lineup (proposed)
