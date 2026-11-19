@@ -15,18 +15,19 @@ The student is targeting the **CSCI 780 (graduate) requirements at A+ level**. N
 `Docs/STORY.md` is the approved design. Read the relevant section before starting any issue. Summary:
 
 - **Setting:** original *Persona 3* / FES, **September**, the **Tziah I** block of Tartarus (floors 114-138). Every Persona is in its **base form**: no evolutions, and no Thanatos. Tziah's look is **gold**.
-- **Story:** S.E.E.S. is sealed in on a floor. Clearing a floor's waves breaks its seal. There are **6 floors**, and floor 6 is the boss, **the Jailer** (an original Shadow that chains towers and summons waves).
+- **Story:** a short intro (the stairs seal, Fuuka explains), then S.E.E.S. is sealed in on a floor. Clearing a floor's waves breaks its seal. There are **6 floors**, each with its **own Tziah I layout** (gold, palace-like corridors), and floor 6 is the boss, **the Jailer** (an original Shadow that chains towers and summons waves). **Floor 1 is a guided tutorial.**
 - **Party:** Makoto always goes, plus **3 members** chosen from the roster. Members can be swapped at the break between floors, where Fuuka previews the next floor's Shadows. **Fuuka is the navigator, not a tower.**
-- **Towers:** placing is **free**. Each member places **one tower** (their own Persona). Makoto (the Wild Card) can place **any of his 11 Personas, each once**.
-- **Field limit:** the Jailer's suppression caps the **total** towers on the field per floor at **8 / 7 / 6 / 6 / 5 / 4**. When a new floor's limit is lower, the player dismisses towers before the floor starts. **There's no way to win slots back.**
+- **Towers:** placing is **free**, **anywhere beside the path** (but not too close to it). Each member places **one tower** (their own Persona). Makoto (the Wild Card) can place **any of his 11 Personas, each once**.
+- **Field limit:** the Jailer's suppression caps the **total** towers on the field per floor at **8 / 7 / 6 / 6 / 5 / 4**. **Towers don't carry over:** every floor starts with an empty field and you redeploy. **There's no way to win slots back.**
 - **19 towers, each with a unique role, with no overlaps** (STORY.md §5):
   - **Members:** Yukari/Io pushback, Junpei/Hermes artillery, Akihiko/Polydeuces brawler, Mitsuru/Penthesilea controller, Aigis/Palladion sniper, Ken/Nemesis executioner, Koromaru/Cerberus debuffer, Shinjiro/Castor tank buster.
   - **Makoto:** Orpheus generalist, Jack Frost trapper, Sarasvati support aura, Oberon chain lightning, Thoth SP battery, Shiisaa last line of defense, Thor anti-air, Melchizedek pulse, Lakshmi resistance breaker, Pixie multishot, Valkyrie interceptor.
-- **Skills:** one **shared SP pool** (proposed: max 100, start 50, +2/s, +5 per kill, +3 more on a weakness kill). Each member has a **signature skill** (click the button, then click a target) costing 20-50 SP with a 10-30 s cooldown. Makoto's only skill is **Persona Swap**.
+- **SP is individual:** each party member has their own SP, and Makoto has one pool shared by all his Personas. A Persona on the field drains its owner's SP over time, and skills cost the owner's SP. At 0 SP the Persona is unsummoned and the member rests. SP regenerates slowly off the field and partly at the stairs breather, and a weakness hit restores a little to the attacker. **All the numbers are to tune in playtesting.**
+- **Skills:** each member has a **signature skill** (click the button, then click a target) costing 20-50 SP with a 10-30 s cooldown. Makoto's only skill is **Persona Swap**.
 - **Damage types:** Slash, Strike, Pierce, Fire, Ice, Elec, Wind, Light, Dark, Almighty. A Shadow can have **several** weaknesses and resistances. A weakness hit knocks the Shadow down, and when every Shadow is down, an **All-Out Attack** triggers.
 - **Shadows:** the Tziah I roster, by floor (STORY.md §3). Drives and Wheels are **fast**, Tiaras and Idols **fly**. Floor 3 ends with three Arcane Turrets, and floor 5 ends with the Sleeping Table.
 - **Between floors:** talk with one member for a small Persona stat boost (bonds).
-- **Losing:** a Shadow reaches the team's position.
+- **Losing:** a Shadow reaches the team's position. The player then picks **Retry floor** (same party, same floor, empty field) or **Retreat** (restart from Floor 1 and choose the party again).
 
 ### Starter code → new design
 The code in the repo is still the **starter kit** (Dark Hour / Clock Tower theme). Issues migrate it one piece at a time, so map old to new as you go:
@@ -34,9 +35,11 @@ The code in the repo is still the **starter kit** (Dark Hour / Clock Tower theme
 | Starter kit | New design |
 |---|---|
 | Nights (waves) + Full Moon | Floors 1-6 + the Jailer |
-| Free Time + Social Links | Floor break + bonds with a member |
+| Free Time + Social Links | Stairs breather + bonds with a party member (or Fuuka) |
 | Clock Tower (goal) | The team's position |
 | SP spent to buy towers; limit +1 per Fool rank | Placing is free; the per-floor field limit is fixed |
+| One shared SP pool | Individual SP per member (Makoto's Personas share one) |
+| One flat board, towers carry over | A unique layout per floor; redeploy every floor |
 | Agi / Bufu / Zio | Fire / Ice / Elec (plus the other damage types) |
 | 3 generic towers | 8 member towers + 11 Makoto Personas |
 | The Reaper | The Jailer |
