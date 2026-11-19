@@ -50,6 +50,8 @@ namespace MidnightHour
         public List<TowerDef> Towers { get; private set; } = new List<TowerDef>();
         public List<EnemyDef> Enemies { get; private set; } = new List<EnemyDef>();
         public List<WaveDef> Waves { get; private set; } = new List<WaveDef>();
+        public List<MemberDef> Members { get; private set; } = new List<MemberDef>();
+        public List<TowerDef> MakotoPersonas { get; private set; } = new List<TowerDef>();
 
         public GameState State { get; private set; } = GameState.Briefing;
         public int StateChangedFrame { get; private set; } = -1;
@@ -99,6 +101,13 @@ namespace MidnightHour
             spawner = waveSpawner;
             SP = startingSP;
             Time.timeScale = 1f;
+        }
+
+        /// <summary>The S.E.E.S. roster. Not placeable yet: party selection (#2) turns it into the tower bar.</summary>
+        public void ConfigureRoster(List<MemberDef> members, List<TowerDef> makotoPersonas)
+        {
+            Members = members ?? new List<MemberDef>();
+            MakotoPersonas = makotoPersonas ?? new List<TowerDef>();
         }
 
         // ------------------------------------------------------------ Loop
@@ -278,9 +287,9 @@ namespace MidnightHour
         {
             switch (e)
             {
-                case Element.Agi: return SocialLink.Magician;
-                case Element.Bufu: return SocialLink.Empress;
-                case Element.Zio: return SocialLink.Chariot;
+                case Element.Fire: return SocialLink.Magician;
+                case Element.Ice: return SocialLink.Empress;
+                case Element.Elec: return SocialLink.Chariot;
                 default: return null;
             }
         }

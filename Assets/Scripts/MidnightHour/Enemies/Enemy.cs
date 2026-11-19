@@ -156,9 +156,9 @@ namespace MidnightHour
             float weakMult = gm != null ? gm.weaknessMultiplier : 1.5f;
             float resistMult = gm != null ? gm.resistMultiplier : 0.5f;
 
-            bool elemental = element != Element.None && element != Element.Almighty;
-            bool weak = elemental && element == Def.weakness;
-            bool resist = elemental && element == Def.resist;
+            // Almighty (and None) ignore affinities. If a type is somehow listed as both, the weakness wins.
+            bool weak = Def.IsWeakTo(element);
+            bool resist = !weak && Def.Resists(element);
 
             float dmg = amount * (weak ? weakMult : resist ? resistMult : 1f);
             HP -= dmg;
@@ -178,7 +178,7 @@ namespace MidnightHour
                 return HitResult.Killed;
             }
 
-            if (weak && state == State.Walking && !Def.isBoss)
+            if (weak && state == State.Walking && !Def.IsBoss)
             {
                 KnockDown(hitDirection);
                 if (gm != null) gm.PlaySfx(gm.weakSound, 0.7f);
@@ -215,7 +215,7 @@ namespace MidnightHour
                 gm.OnEnemyKilled(this);
                 gm.PlaySfx(Def.deathSound, 0.6f);
             }
-            Factory.Shatter(AimPoint, Def.color, Def.isBoss ? 24 : 7, Def.isBoss ? 0.5f : 0.25f);
+            Factory.Shatter(AimPoint, Def.color, Def.IsBoss ? 24 : 7, Def.IsBoss ? 0.5f : 0.25f);
             Destroy(gameObject);
         }
 

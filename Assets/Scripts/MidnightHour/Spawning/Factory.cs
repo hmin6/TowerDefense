@@ -118,7 +118,7 @@ namespace MidnightHour
             var rb = root.AddComponent<Rigidbody>();
             rb.isKinematic = true;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
-            rb.mass = def.isBoss ? 50f : 1f;
+            rb.mass = def.IsBoss ? 50f : 1f;
 
             var enemy = root.AddComponent<Enemy>();
             enemy.Init(def, typeIndex, path);
@@ -126,7 +126,7 @@ namespace MidnightHour
             return enemy;
         }
 
-        /// <summary>White Shadow mask on the front. Its EYES glow in the enemy's weakness color.</summary>
+        /// <summary>White Shadow mask on the front. Its EYES glow in the colour of its first weakness.</summary>
         static void AddMask(GameObject root, EnemyDef def)
         {
             var mf = root.GetComponent<MeshFilter>();
@@ -135,11 +135,11 @@ namespace MidnightHour
 
             var mask = VisualFactory.Prim(PrimitiveType.Cube, root.transform, new Vector3(0f, faceY, ext.z * 0.9f),
                                           new Vector3(ext.x * 1.3f, 0.32f, 0.12f), new Color(0.92f, 0.92f, 0.9f), 0f, false, "Mask");
-            Color eye = def.isBoss ? new Color(1f, 0.05f, 0.05f) : ElementInfo.GetColor(def.weakness);
+            Color eye = def.IsBoss ? new Color(1f, 0.05f, 0.05f) : ElementInfo.GetColor(def.PrimaryWeakness);
             VisualFactory.Prim(PrimitiveType.Cube, mask.transform, new Vector3(-0.22f, 0.05f, 0.6f), new Vector3(0.18f, 0.4f, 0.4f), eye, 3f);
             VisualFactory.Prim(PrimitiveType.Cube, mask.transform, new Vector3(0.22f, 0.05f, 0.6f), new Vector3(0.18f, 0.4f, 0.4f), eye, 3f);
 
-            if (def.isBoss)
+            if (def.IsBoss)
             {
                 // Two long barrels, because every reaper needs a pair of guns.
                 VisualFactory.Prim(PrimitiveType.Cube, root.transform, new Vector3(-0.75f, 0f, 0.4f), new Vector3(0.12f, 0.12f, 0.9f), new Color(0.5f, 0.5f, 0.55f));

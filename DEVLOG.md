@@ -26,6 +26,35 @@ Template: copy this block for each session.
 
 ---
 
+## 2026-11-18: Repo setup, issue plan, and #1 damage types + data model
+**Time spent:** _(fill in)_
+**Goal:** put the project on GitHub, turn STORY.md into issues, and lay the data foundation for the new design.
+
+### Done
+- Initialised git, committed the working starter kit as the baseline on `main`, then committed `Docs/STORY.md` separately. Pushed both to `hmin6/TowerDefense`.
+- Rewrote CLAUDE.md around the STORY.md design (Tziah I, field limit, 19 Persona towers, shared SP) and added a Workflow section (one branch per issue, `Closes #N`, a DEVLOG entry per PR, no STORY.md changes without approval, flag [CHECK] items).
+- Created 9 labels, 5 milestones (M1-M5) and 18 issues from STORY.md.
+- **#1:** expanded the damage types from Agi / Bufu / Zio to Slash, Strike, Pierce, Fire, Ice, Elec, Wind, Light, Dark and Almighty. Shadows can now have several weaknesses and resistances, plus a movement type (Ground / Fast / Flying) and a rank (Normal / FloorBoss / Boss / Treasure).
+- **#1:** added the S.E.E.S. roster data: `MemberDef` for the 8 members, and 11 Makoto Personas as `TowerDef`s with user, Arcana, role and source. They're on the GameBootstrap Inspector but aren't placeable yet (that's #2).
+- Decisions from review: STORY.md marked APPROVED on `main`, and Makoto's Persona elements were added to it (Orpheus Fire, Jack Frost Ice, Sarasvati neutral, Oberon Elec, Thoth Fire, Shiisaa Strike, Thor Elec, Melchizedek Light, Lakshmi Ice, Pixie Elec, Valkyrie Slash). Cerberus is Dark, with Fire as flavour only. Both are in the roster data now.
+- Added #20 (import non-basic assets) under M5.
+
+### Problems & fixes
+- `Main.unity` saves enums as ints (`element: 3` meant Zio). Renumbering the enum would silently turn old data into the wrong element, so the new enum keeps the old numbers (Fire = 1, Ice = 2, Elec = 3, Almighty = 4) and adds the new types after them.
+- The single `weakness` / `resist` / `isBoss` fields became lists and a rank. `EnemyDef` now migrates old scene data in `OnAfterDeserialize`, so nothing is lost and no Inspector reset is needed.
+- Couldn't press Play from Claude Code, so I compiled the scripts against Unity's DLLs with `dotnet build` (0 errors) and ran a small console check of the data model and migration (all pass).
+
+### AI prompts that mattered
+- "Turn STORY.md into GitHub issues, each with a description, a checklist of what 'done' means, and a reference to the STORY.md section."
+- "Never change anything in STORY.md without my approval; anything marked [CHECK] gets flagged, not guessed."
+- Flagging the missing Persona elements on the PR, instead of guessing them, got a quick, complete answer.
+
+### Next
+- [ ] Press Play and confirm the starter game plays exactly as before (see the PR test list)
+- [ ] #2 party selection
+
+---
+
 ## 2026-11-17: Day 1: Concept and starter kit
 **Goal:** pick a theme that can reach A+ on the CSCI 780 track, then get a full playable loop working on the first day.
 

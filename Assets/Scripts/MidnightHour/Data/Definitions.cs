@@ -3,15 +3,58 @@ using UnityEngine;
 
 namespace MidnightHour
 {
-    /// <summary>All stats for one tower type. Edit these in the Inspector on the GameBootstrap object.</summary>
+    // Enums below are saved as ints in Main.unity: append new values at the end, never reorder.
+
+    /// <summary>Who summons a Persona tower. Fuuka is the navigator, so she never places a tower.</summary>
+    public enum PartyMember { None, Makoto, Yukari, Junpei, Akihiko, Mitsuru, Aigis, Ken, Koromaru, Shinjiro }
+
+    /// <summary>The Major Arcana, in tarot order.</summary>
+    public enum Arcana
+    {
+        None, Fool, Magician, Priestess, Empress, Emperor, Hierophant, Lovers, Chariot, Justice, Hermit,
+        Fortune, Strength, HangedMan, Death, Temperance, Devil, Tower, Star, Moon, Sun, Judgement
+    }
+
+    /// <summary>Every tower's job (STORY.md §5). No two towers share a role. None = a starter-kit tower.</summary>
+    public enum TowerRole
+    {
+        None,
+        // S.E.E.S. members
+        Pushback, Artillery, Brawler, Controller, Sniper, Executioner, Debuffer, TankBuster,
+        // Makoto's Personas
+        Generalist, Trapper, SupportAura, ChainLightning, SpBattery, LastLine, AntiAir, Pulse,
+        ResistanceBreaker, Multishot, Interceptor
+    }
+
+    /// <summary>Where a Persona comes from. Own = a member's own Persona. Movie / Game = how Makoto has it by September.</summary>
+    public enum PersonaSource { Own, Movie, Game }
+
+    /// <summary>How a Shadow moves along the path. Behaviour arrives with the Tziah I roster (#5).</summary>
+    public enum ShadowMovement { Ground, Fast, Flying }
+
+    /// <summary>Normal Shadow, a floor finale (Arcane Turret, Sleeping Table), the final boss, or a treasure Shadow.</summary>
+    public enum ShadowRank { Normal, FloorBoss, Boss, Treasure }
+
+    /// <summary>All stats for one tower type: a Persona. Edit these in the Inspector on the GameBootstrap object.</summary>
     [System.Serializable]
     public class TowerDef
     {
+        [Tooltip("The Persona's name, shown on its card.")]
         public string displayName = "Tower";
         [TextArea(1, 3)] public string description = "";
-        public Element element = Element.Zio;
+        public Element element = Element.Elec;
+        [Tooltip("Starter kit only. Placing becomes free in #3.")]
         public int cost = 100;
 
+        [Header("Persona")]
+        [Tooltip("Who summons this Persona. Each member has exactly one; Makoto can field each of his once.")]
+        public PartyMember user = PartyMember.None;
+        public Arcana arcana = Arcana.None;
+        [Tooltip("The tower's job (STORY.md §5). Behaviours arrive in M2.")]
+        public TowerRole role = TowerRole.None;
+        public PersonaSource source = PersonaSource.Own;
+
+        [Header("Stats")]
         [Tooltip("Shots per second.")]
         public float fireRate = 1f;
 
@@ -43,19 +86,36 @@ namespace MidnightHour
         public AudioClip fireSound;
     }
 
+    /// <summary>A S.E.E.S. member who can join the party. Each places exactly one tower: their own Persona.</summary>
+    [System.Serializable]
+    public class MemberDef
+    {
+        public PartyMember id = PartyMember.None;
+        public string displayName = "Member";
+        [Tooltip("This member's Persona: the one tower they can place. Its element, Arcana and role describe the member.")]
+        public TowerDef persona = new TowerDef();
+    }
+
     /// <summary>All stats for one enemy (Shadow) type.</summary>
     [System.Serializable]
-    public class EnemyDef
+    public class EnemyDef : ISerializationCallbackReceiver
     {
         public string displayName = "Shadow";
         public float maxHP = 50f;
         [Tooltip("Meters per second along the path.")]
         public float speed = 3f;
-        public Element weakness = Element.None;
-        public Element resist = Element.None;
+
+        [Header("Affinities")]
+        [Tooltip("Damage types that deal extra damage and knock this Shadow down.")]
+        public List<Element> weaknesses = new List<Element>();
+        [Tooltip("Damage types that deal reduced damage.")]
+        public List<Element> resists = new List<Element>();
+
+        [Header("Type")]
+        public ShadowMovement movement = ShadowMovement.Ground;
+        [Tooltip("Boss = can't be knocked down and gets the big health bar.")]
+        public ShadowRank rank = ShadowRank.Normal;
         public int spReward = 15;
-        [Tooltip("Bosses can't be knocked down and get a big health bar.")]
-        public bool isBoss = false;
 
         [Header("Placeholder look (ignored if modelPrefab is set)")]
         public PrimitiveType shape = PrimitiveType.Sphere;
@@ -65,6 +125,48 @@ namespace MidnightHour
         [Header("Optional art")]
         public GameObject modelPrefab;
         public AudioClip deathSound;
+
+        // Starter-kit fields, kept only so old scene data migrates into the lists above.
+        [SerializeField, HideInInspector] Element weakness = Element.None;
+        [SerializeField, HideInInspector] Element resist = Element.None;
+        [SerializeField, HideInInspector] bool isBoss = false;
+
+        public bool IsBoss { get { return rank == ShadowRank.Boss; } }
+
+        public bool IsWeakTo(Element e)
+        {
+            return ElementInfo.HasAffinity(e) && weaknesses != null && weaknesses.Contains(e);
+        }
+
+        public bool Resists(Element e)
+        {
+            return ElementInfo.HasAffinity(e) && resists != null && resists.Contains(e);
+        }
+
+        /// <summary>The first listed weakness (used for the eye colour), or None.</summary>
+        public Element PrimaryWeakness
+        {
+            get
+            {
+                if (weaknesses != null)
+                    foreach (var e in weaknesses) if (ElementInfo.HasAffinity(e)) return e;
+                return Element.None;
+            }
+        }
+
+        public void OnBeforeSerialize() { }
+
+        public void OnAfterDeserialize()
+        {
+            if (weaknesses == null) weaknesses = new List<Element>();
+            if (resists == null) resists = new List<Element>();
+            if (weakness != Element.None && !weaknesses.Contains(weakness)) weaknesses.Add(weakness);
+            if (resist != Element.None && !resists.Contains(resist)) resists.Add(resist);
+            if (isBoss) rank = ShadowRank.Boss;
+            weakness = Element.None;
+            resist = Element.None;
+            isBoss = false;
+        }
     }
 
     [System.Serializable]

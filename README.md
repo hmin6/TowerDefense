@@ -47,7 +47,7 @@ Both the new **Input System** and the old **Input Manager** work, so the *Active
 ### A+ features
 
 - **Persona battle system as tower defense**
-  - **Weakness / Resist:** each Shadow is weak to one element (×1.5 damage) and resists another (×0.5). Its **glowing eye color shows its weakness**.
+  - **Weakness / Resist:** Persona 3's ten damage types (Slash, Strike, Pierce, Fire, Ice, Elec, Wind, Light, Dark, Almighty). A Shadow can be weak to several (×1.5 damage) and resist several (×0.5), and Almighty ignores both. Its **glowing eye color shows its first weakness**, and its health bar shows a pip for each one.
   - **Knockdown (real physics):** a weakness hit switches the Shadow from a kinematic to a dynamic Rigidbody and launches it with an impulse and torque. When the stun ends it recovers and walks back onto the path.
   - **ONE MORE!:** a tower that knocks a Shadow down gets an instant extra shot.
   - **ALL-OUT ATTACK!:** when every Shadow on the field is knocked down at once, they all take 50% of their max HP, with a screen shake.
