@@ -73,6 +73,7 @@ Graded requirements that each new system touches:
 - **Every PR body says `Closes #<number>`.**
 - **Every PR adds a `DEVLOG.md` entry** (newest at the top, using the template in that file).
 - **Never change anything in `Docs/STORY.md` without the student's approval.** If an issue needs a design change, stop and ask.
+- **STORY.md must always match the code.** When the student approves a design decision, such as an element or a number, update STORY.md on `main` in the same session. If code would have to differ from STORY.md, ask first; don't let them drift apart.
 - **Anything STORY.md marks `[CHECK]` (or `[DECIDE]`) gets flagged to the student, not guessed.** The same goes for details the doc doesn't specify, such as an element it never names: use a clearly marked placeholder and list it in the PR as an open question.
 - The student reviews and merges PRs. Don't merge your own PRs.
 - GitHub repo: `hmin6/TowerDefense`. Use the `gh` CLI. Labels: core, tower-role, skills, boss, story, ui, requirement, docs, polish. Milestones run M1 Core systems → M5 Submission.
