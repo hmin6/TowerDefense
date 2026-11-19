@@ -22,6 +22,7 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 ## 2. How it plays
 
 ### Before the climb: choose the party
+- A short **story intro** plays before the party screen: the stairs seal, and Fuuka explains the situation.
 - Like entering Tartarus, you **pick who goes in**.
 - Makoto (the leader) always goes. You choose **3 more** from the S.E.E.S. roster.
 - **Proposed:** you can **swap members at the break between floors**. Fuuka previews the next floor's Shadows, so you can adjust the party to counter them.
@@ -31,6 +32,7 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 - **Each party member places one tower**: their own Persona.
 - **Makoto is the Wild Card.** He can place **any of his Personas, as many as the field limit allows**, but each Persona only once. There's no limit specific to Makoto.
 - **Every tower has its own role**, with no overlaps (see section 5).
+- Towers go **anywhere beside the path**, just not too close to the Shadows' corridor itself.
 
 ### The seal suppresses Personas (the field limit)
 - The boss Shadow's influence doesn't just seal the stairs. It also **suppresses Personas**, which limits **how many towers can be on the field at once**.
@@ -45,27 +47,31 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 | 5 | 5 |
 | 6 (boss) | 4 |
 
-- The limit drops when you reach a new floor. If you're over it, you choose which towers to dismiss before the floor starts.
+- **Every floor has its own layout, so towers don't carry over.** Each floor starts with an empty field, and you redeploy within that floor's limit.
 - There's **no way to win slots back** during a floor. The limit for each floor is fixed.
 - Fewer towers *and* tougher Shadows makes the difficulty climb fast, so skills (SP) become more important on later floors. The numbers will need playtesting.
 
-### Skills: each member's signature move
+### Skills and SP: each member's signature move
 - Every deployed member has a **signature skill** you trigger yourself: click their skill button, then click where to use it.
-- Skills cost **SP** from **one shared team pool**, and each skill has a **cooldown** after use.
-- The SP pool refills slowly over time and gets a boost each time you defeat a Shadow (more for hitting weaknesses).
+- **SP is individual.** Each party member has their own SP. **Makoto has one pool shared by all his Personas.**
+- A Persona on the field **drains its owner's SP over time**, and skills also cost the owner's SP. Each skill has a **cooldown** after use.
+- At **0 SP**, that Persona is unsummoned and the member **rests**. SP regenerates slowly while off the field, and partly at the stairs breather.
+- **Hitting a weakness** restores a little SP to the attacker.
 - **Proposed:** only the **members** have signature skills. **Makoto** has one skill of his own: **Persona Swap**, which instantly swaps one of his placed Personas for another (the Wild Card). His Personas don't have separate skills, which keeps the number of buttons sensible.
-- **Proposed starting numbers** (to be tuned in playtesting):
-  - **SP pool:** max 100, starting at 50, refilling 2 per second.
-  - **SP from kills:** +5 per Shadow, +3 more if the kill was on a weakness.
+- **Numbers (all to tune in playtesting):**
+  - **SP per member:** maximum, drain rate on the field, regeneration while off the field, and the partial refill at the breather.
+  - **SP from a weakness hit:** a little, to the attacker.
   - **Skills:** cost 20-50 SP, with 10-30 second cooldowns.
 
 ### On each floor
 1. The team arrives, and the staircase behind them seals.
 2. Fuuka scans the floor and calls out what's coming, including weaknesses.
-3. You deploy towers at fixed spots around **where the team is holding out**, up to the floor's field limit.
+3. You deploy towers anywhere beside the corridors, around **where the team is holding out**, up to the floor's field limit. The field starts empty on every floor.
 4. Shadows come down the floor's corridors toward the team.
 5. You use skills at the right moments (hitting a weakness knocks Shadows down; knock them all down for an **All-Out Attack**).
 6. Clearing every wave breaks the seal on the stairs up.
+
+**Floor 1 is a guided tutorial**, with Fuuka's lines: placing towers, weaknesses, SP drain and skills.
 
 ### Between floors
 - There's a short breather on the stairs. You talk with one party member, which gives a small boost to their Persona's stats. Personas stay in their base forms.
@@ -77,7 +83,9 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 - You reach the Shadow causing the seal (the boss). It fights while summoning its own waves.
 
 ### Losing
-- If the Shadows break through to the team's position, S.E.E.S. is overrun and forced to retreat out of Tartarus.
+- If the Shadows break through to the team's position, S.E.E.S. is overrun. You then choose:
+  - **Retry floor:** the same floor again with the same party, redeploying from an empty field.
+  - **Retreat:** leave Tartarus and climb again from Floor 1, choosing the party again.
 
 ## 3. Floors
 
@@ -91,6 +99,8 @@ S.E.E.S. is **stuck and defending themselves**. To get out, they have to fight t
 | 6 | **Boss floor** | **The Jailer** and its summons | Its lair sits just below the Tziah barrier (139F) |
 
 **Proposed:** six floors (five plus the boss). This matches the field-limit table, and each floor introduces one new thing.
+
+**Layouts:** each of the six floors has its own unique path and layout, styled after Tartarus's Tziah I block: gold, palace-like corridors.
 
 **How "fast" and "flying" are decided:** *Persona 3*'s battles are turn-based, so Shadows don't have a speed or a flying type. For the tower defense, they're assigned by how each Shadow looks: Drives and Wheels are vehicles, so they're fast; Tiaras and Idols float, so they fly.
 
@@ -199,7 +209,7 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 - [x] Thanatos left out (not part of the September story)
 - [x] Shiisaa as last line of defense (proposed)
 - [x] Skills: members only, plus Persona Swap for Makoto (proposed)
-- [x] Skill resource: shared team SP pool
+- [x] Skill resource: individual SP per member (Makoto's Personas share one pool), replacing the shared team pool
 - [x] Tower cost: placing is free
 - [x] SP starting numbers (proposed; tuned in playtesting)
 - [x] Suppression stays; no way to win slots back
@@ -208,5 +218,9 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 - [x] Shadow weaknesses (original *Persona 3*)
 - [x] Opulent Hand bonus (optional)
 - [x] Boss: the Jailer (proposed)
+- [x] Losing: Retry floor or Retreat
+- [x] Each floor has its own Tziah I layout; towers are redeployed every floor
+- [x] Placement: anywhere beside the path (not too close to it)
+- [x] Story intro before the party screen, and Floor 1 as a guided tutorial
 
 Once these are checked, the build gets split into GitHub issues and done in Claude Code.
