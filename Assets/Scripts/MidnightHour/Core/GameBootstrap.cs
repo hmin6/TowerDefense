@@ -33,7 +33,9 @@ namespace MidnightHour
 
         [Header("Rules")]
         public int startingSP = 350;
-        public int baseTowerLimit = 6;
+        [Tooltip("Field limit per floor: the most towers on the field at once (STORY.md §2: 8, 7, 6, 6, 5, 4).\n" +
+                 "Placing is free; this is the only limit. Until floors exist (#4), night N uses entry N.")]
+        public List<int> fieldLimits = new List<int>();
 
         [Header("Look")]
         public bool buildEnvironment = true;
@@ -63,6 +65,7 @@ namespace MidnightHour
             waves = DefaultContent.Waves();
             members = DefaultContent.Members();
             makotoPersonas = DefaultContent.MakotoPersonas();
+            fieldLimits = DefaultContent.FieldLimits();
             pathControlPoints = DefaultContent.PathPoints();
         }
 
@@ -72,6 +75,7 @@ namespace MidnightHour
             if (waves == null || waves.Count == 0) waves = DefaultContent.Waves();
             if (members == null || members.Count == 0) members = DefaultContent.Members();
             if (makotoPersonas == null || makotoPersonas.Count == 0) makotoPersonas = DefaultContent.MakotoPersonas();
+            if (fieldLimits == null || fieldLimits.Count == 0) fieldLimits = DefaultContent.FieldLimits();
             if (pathControlPoints == null || pathControlPoints.Count < 2) pathControlPoints = DefaultContent.PathPoints();
         }
 
@@ -108,7 +112,7 @@ namespace MidnightHour
             var spawner = systems.AddComponent<WaveSpawner>();
             var gm = systems.AddComponent<GameManager>();
             gm.startingSP = startingSP;
-            gm.baseTowerLimit = baseTowerLimit;
+            gm.fieldLimits = fieldLimits;
             gm.weakSound = weakSound;
             gm.allOutSound = allOutSound;
             gm.killSound = killSound;

@@ -68,8 +68,6 @@ namespace MidnightHour
         public string displayName = "Tower";
         [TextArea(1, 3)] public string description = "";
         public Element element = Element.Elec;
-        [Tooltip("Starter kit only. Placing becomes free in #3.")]
-        public int cost = 100;
 
         [Header("Persona")]
         [Tooltip("Who summons this Persona. Each member has exactly one; Makoto can field each of his once.")]

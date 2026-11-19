@@ -38,7 +38,7 @@ Both the new **Input System** and the old **Input Manager** work, so the *Active
 | C | Game ends when an enemy completes its path | The first Shadow to reach the Clock Tower triggers **Game Over** immediately. | `Enemy.ReachedGoal`, `GameManager.EnemyReachedGoal` |
 | B | ≥2 tower types with different rate of fire, projectile speed **and** tower height | **19 Persona towers**, each with its own rate, projectile speed and height (hover a card to see them). For example: Polydeuces (4.0/s, 32 m/s, 1.0 m), Penthesilea (1.1/s, 16 m/s, 2.4 m), Palladion (0.8/s, 45 m/s, 3.4 m), Hermes (0.5/s, 9 m/s arc, 4.0 m). | `Data/DefaultContent.cs` (`Members`, `MakotoPersonas`) |
 | B | Text overlay clearly explains tower placement | A "HOW TO PLACE TOWERS" panel is always on screen (toggle with H). Tooltips at the cursor explain *why* a spot is blocked. | `UI/HUD.cs` (`DrawHelp`, `DrawPlacementHint`) |
-| B | Limited number of towers | Placing is free, but there's a hard **tower limit** (6, +1 per Fool rank). Press X on a tower to dismiss it. | `GameManager.TowerLimit` |
+| B | Limited number of towers | Placing is free, but the **field limit** caps the towers on the field per floor: **8, 7, 6, 6, 5, 4** (the Jailer's seal tightens as you climb), and nothing raises it. Each Persona can be on the field once. When a new floor's limit is lower, a dismiss screen makes you choose which towers leave before it starts. Press X on a tower to dismiss it. | `GameManager.FieldLimit`, `GameManager.PlacementBlockReason`, `HUD.DrawDismiss` |
 | B | Towers aim at the **predicted** location from current velocity and position | The closed-form quadratic intercept for straight shots, and a ballistic solver for arcing shots. Press **L** to see the lead lines. | `Towers/Aiming.cs`, `Tower.ComputeShot` |
 | A | Multiple enemy types with different speed and HP | **4 Shadows:** Cowardly Mask (fast/fragile), Gloom Slime (medium), Iron Knight (slow/tanky), The Reaper (boss). | `Data/DefaultContent.cs` |
 | A | Non-basic assets | _Fill in: list the imported models, textures, audio and fonts you used._ | `Credits` below |
@@ -54,7 +54,8 @@ Both the new **Input System** and the old **Input Manager** work, so the *Active
 - **Ballistic predictive aim:** the Agi Inferno fires a gravity-affected Rigidbody. The solver iterates the flight time against the target's predicted position. It then **corrects for PhysX's semi-implicit Euler integration** (−½·g·Δt), so the simulated shell actually lands where the math says.
 - **Path-aware aim mode (toggle P):** instead of linear lead, towers predict *along the spline*, so they hit Shadows rounding corners. The assignment's "current velocity" version stays the default, and you can switch modes live to compare them.
 - **Party selection (Persona 3's S.E.E.S.):** before the climb, Makoto picks 3 of 8 members, and each brings their own Persona tower. Makoto is the Wild Card and can field any of his 11 Personas. Between nights you can swap members, and a swapped-out member's tower leaves the field.
-- **Day / Night calendar + Social Links:** six nights ending in a **FULL MOON** boss wave. Between nights you pick one Social Link to rank up (damage and fire-rate boosts per element, or +1 tower slot).
+- **Field limit (the Jailer's seal):** the number of towers allowed drops floor by floor (8 → 4), so later floors force hard choices about which Personas to keep.
+- **Day / Night calendar + Social Links:** six nights ending in a **FULL MOON** boss wave. Between nights you pick one Social Link to rank up (damage and fire-rate boosts per element).
 - **Physics juice:** splash damage with `AddExplosionForce`, death shards, swept sphere-cast collisions (fast shots never tunnel), screen shake, trails and flashes.
 - **Quality of life:** game speed ×1/×2/×3, pause, restart without reloading the scene, camera pan and zoom, a range ring while placing, and health bars with weakness and slow indicators.
 - **Data-driven:** every tower, enemy and wave is editable in the Inspector, and any of them can take a custom model prefab.
@@ -69,10 +70,11 @@ Both the new **Input System** and the old **Input Manager** work, so the *Active
 | **4** or click card | Cycle through Makoto's Personas (the Wild Card) |
 | **Left-click** | Place tower |
 | **Right-click / Esc** | Cancel placement |
-| **X** (hovering a tower) | Dismiss tower |
+| **X** (hovering a tower) | Dismiss tower (frees its slot; that Persona can be placed again) |
 | **1–8** or click (party screen) | Add or remove a member |
+| **1–8** or click (dismiss screen) | Mark or unmark a tower to dismiss |
 | **Enter** | Start game / confirm the party / begin the night |
-| **1–4** (Free Time) | Choose a Social Link |
+| **1–3** (Free Time) | Choose a Social Link |
 | **Space** | Pause |
 | **F** | Cycle game speed |
 | **P** | Toggle aim mode: linear lead ↔ path-aware |
