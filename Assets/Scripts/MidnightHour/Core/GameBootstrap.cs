@@ -19,6 +19,12 @@ namespace MidnightHour
         public List<EnemyDef> enemies = new List<EnemyDef>();
         public List<WaveDef> waves = new List<WaveDef>();
 
+        [Header("S.E.E.S. roster (STORY.md §5; used from party selection, #2, onward)")]
+        [Tooltip("The 8 members who can join Makoto. Each places one tower: their own Persona.")]
+        public List<MemberDef> members = new List<MemberDef>();
+        [Tooltip("Makoto's Personas (the Wild Card). He can field each one once.")]
+        public List<TowerDef> makotoPersonas = new List<TowerDef>();
+
         [Header("Map")]
         [Tooltip("Optional: an object whose children are path waypoints (in order). Overrides the list below.")]
         public Transform customPathRoot;
@@ -57,6 +63,8 @@ namespace MidnightHour
             towers = DefaultContent.Towers();
             enemies = DefaultContent.Enemies();
             waves = DefaultContent.Waves();
+            members = DefaultContent.Members();
+            makotoPersonas = DefaultContent.MakotoPersonas();
             pathControlPoints = DefaultContent.PathPoints();
         }
 
@@ -65,6 +73,8 @@ namespace MidnightHour
             if (towers == null || towers.Count == 0) towers = DefaultContent.Towers();
             if (enemies == null || enemies.Count == 0) enemies = DefaultContent.Enemies();
             if (waves == null || waves.Count == 0) waves = DefaultContent.Waves();
+            if (members == null || members.Count == 0) members = DefaultContent.Members();
+            if (makotoPersonas == null || makotoPersonas.Count == 0) makotoPersonas = DefaultContent.MakotoPersonas();
             if (pathControlPoints == null || pathControlPoints.Count < 2) pathControlPoints = DefaultContent.PathPoints();
         }
 
@@ -108,6 +118,7 @@ namespace MidnightHour
             gm.gameOverSound = gameOverSound;
             gm.victorySound = victorySound;
             gm.Configure(towers, enemies, waves, spawner);
+            gm.ConfigureRoster(members, makotoPersonas);
 
             var placer = systems.AddComponent<TowerPlacer>();
             placer.mapHalfExtents = boardHalfSize - Vector2.one * 0.8f;

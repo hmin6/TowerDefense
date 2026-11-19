@@ -236,16 +236,24 @@ namespace MidnightHour
         {
             foreach (var e in Enemy.All)
             {
-                if (!e.IsAlive || e.Def.isBoss) continue;
+                if (!e.IsAlive || e.Def.IsBoss) continue;
                 if (!ToGui(cam, e.AimPoint + Vector3.up * (e.HeightOffset + 0.45f), out Vector2 g)) continue;
                 const float w = 58f, h = 8f;
                 Rect bg = new Rect(g.x - w * 0.5f, g.y, w, h);
                 Fill(bg, new Color(0, 0, 0, 0.85f));
                 float pct = Mathf.Clamp01(e.HP / e.Def.maxHP);
                 Fill(new Rect(bg.x + 1, bg.y + 1, (w - 2) * pct, h - 2), e.IsKnockedDown ? Gold : Red);
-                // Weakness pip on the left, slow pip on the right.
-                Fill(new Rect(bg.x - 11, bg.y, 8, h), ElementInfo.GetColor(e.Def.weakness));
-                if (e.IsSlowed) Fill(new Rect(bg.xMax + 3, bg.y, 8, h), ElementInfo.GetColor(Element.Bufu));
+                // One pip per weakness on the left (grey = no weakness), slow pip on the right.
+                int pips = 0;
+                if (e.Def.weaknesses != null)
+                    foreach (var el in e.Def.weaknesses)
+                    {
+                        if (!ElementInfo.HasAffinity(el)) continue;
+                        Fill(new Rect(bg.x - 11 - pips * 10, bg.y, 8, h), ElementInfo.GetColor(el));
+                        pips++;
+                    }
+                if (pips == 0) Fill(new Rect(bg.x - 11, bg.y, 8, h), ElementInfo.GetColor(Element.None));
+                if (e.IsSlowed) Fill(new Rect(bg.xMax + 3, bg.y, 8, h), ElementInfo.GetColor(Element.Ice));
             }
         }
 
@@ -267,7 +275,7 @@ namespace MidnightHour
         {
             Enemy boss = null;
             foreach (var e in Enemy.All)
-                if (e.IsAlive && e.Def.isBoss) { boss = e; break; }
+                if (e.IsAlive && e.Def.IsBoss) { boss = e; break; }
             if (boss == null) return;
 
             float w = Mathf.Clamp(W - 1100f, 360f, 760f);
@@ -318,9 +326,9 @@ namespace MidnightHour
             Fill(new Rect(r.x, r.y, r.width, 5), Red);
             Text(new Rect(r.x + 16, r.y + 12, r.width - 32, 32), "SOCIAL LINKS", sHeader, White);
             string links =
-                $"Magician (Agi)    Rank {gm.Rank(SocialLink.Magician)}\n" +
-                $"Empress (Bufu)    Rank {gm.Rank(SocialLink.Empress)}\n" +
-                $"Chariot (Zio)     Rank {gm.Rank(SocialLink.Chariot)}\n" +
+                $"Magician (Fire)   Rank {gm.Rank(SocialLink.Magician)}\n" +
+                $"Empress (Ice)     Rank {gm.Rank(SocialLink.Empress)}\n" +
+                $"Chariot (Elec)    Rank {gm.Rank(SocialLink.Chariot)}\n" +
                 $"Fool (tower slots) Rank {gm.Rank(SocialLink.Fool)}";
             Text(new Rect(r.x + 16, r.y + 50, r.width - 32, 90), links, sSmall, Gold);
 
@@ -480,12 +488,12 @@ namespace MidnightHour
             int ratePct = Mathf.RoundToInt(gm.rankFireRateBonus * 100f);
             string[] bodies =
             {
-                $"Agi towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe kid who never shuts up about fire.",
-                $"Bufu towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe student council president. Ice cold.",
-                $"Zio towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nYour rival from the track team.",
+                $"Fire towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe kid who never shuts up about fire.",
+                $"Ice towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe student council president. Ice cold.",
+                $"Elec towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nYour rival from the track team.",
                 "+1 tower slot.\nA quiet night alone, thinking it all over.",
             };
-            Color[] accents = { ElementInfo.GetColor(Element.Agi), ElementInfo.GetColor(Element.Bufu), ElementInfo.GetColor(Element.Zio), White };
+            Color[] accents = { ElementInfo.GetColor(Element.Fire), ElementInfo.GetColor(Element.Ice), ElementInfo.GetColor(Element.Elec), White };
 
             const float cw = 470f, ch = 150f, gap = 24f;
             float x0 = (W - (cw * 2f + gap)) * 0.5f;
