@@ -77,6 +77,7 @@ Graded requirements that each new system touches:
 
 ## Workflow
 - **One branch per issue**, named `issue-<number>-<short-name>` (for example `issue-1-damage-types`), branched from an up-to-date `main`.
+- **Don't start an issue on top of an unmerged PR.** If the next issue depends on an open PR, wait until the student has merged it. If stacking is unavoidable, tell the student **before** starting. (Stacking caused conflicts after squash merges.)
 - **Every PR body says `Closes #<number>`.**
 - **Every PR adds a `DEVLOG.md` entry** (newest at the top, using the template in that file).
 - **Never change anything in `Docs/STORY.md` without the student's approval.** If an issue needs a design change, stop and ask.
