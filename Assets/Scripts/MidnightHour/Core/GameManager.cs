@@ -18,6 +18,7 @@ namespace MidnightHour
     ///   Clearing floor 6 is a victory.
     ///
     /// The game ends the moment any Shadow reaches the team's position (S.E.E.S. is overrun).
+    /// Then: Retry floor (same party, this floor again, empty field) or Retreat (restart from floor 1).
     /// </summary>
     [DefaultExecutionOrder(-50)]
     public class GameManager : MonoBehaviour
@@ -135,6 +136,8 @@ namespace MidnightHour
         System.Action<List<Vector3>> applyLayout;
         AudioSource sfx;
         float allOutTimer;
+        // Snapshot taken when a floor's deploy phase starts, so Retry floor can rewind to it.
+        int floorStartSP, floorStartKills, floorStartAllOuts;
 
         static readonly Color SealGold = new Color(1f, 0.85f, 0.2f);
         static readonly Color DangerRed = new Color(0.86f, 0.06f, 0.12f);
@@ -202,6 +205,7 @@ namespace MidnightHour
                 else if (State == GameState.Scan) ContinueFromScan();
                 else if (State == GameState.PartySelect) ConfirmParty();
                 else if (State == GameState.Dismiss) ConfirmDismiss();
+                else if (State == GameState.GameOver) RetryFloor();
             }
 
             // Keys 1-8 toggle members. Skip the frame the screen opened, so the key that opened it can't also toggle.
@@ -341,6 +345,9 @@ namespace MidnightHour
                 return;
             }
             SetState(GameState.Planning);
+            floorStartSP = SP;
+            floorStartKills = Kills;
+            floorStartAllOuts = AllOutCount;
             Banner($"{FloorTitle(FloorIndex).ToUpperInvariant()}  -  THE STAIRS SEAL BEHIND YOU", Color.white);
         }
 
@@ -367,14 +374,42 @@ namespace MidnightHour
             PlaySfx(killSound, 0.5f);
         }
 
-        /// <summary>Wipes the board and starts the climb again from floor 1 at the party screen (no scene reload needed).</summary>
-        public void ResetGame()
+        /// <summary>Removes every Shadow, tower and projectile right away (deactivated now, destroyed at frame end).</summary>
+        void ClearBoard()
         {
             if (spawner != null) spawner.Stop();
-            foreach (var e in new List<Enemy>(Enemy.All)) if (e != null) Destroy(e.gameObject);
-            foreach (var t in new List<Tower>(Tower.All)) if (t != null) Destroy(t.gameObject);
-            foreach (var p in new List<Projectile>(Projectile.All)) if (p != null) Destroy(p.gameObject);
+            foreach (var e in new List<Enemy>(Enemy.All)) if (e != null) { e.gameObject.SetActive(false); Destroy(e.gameObject); }
+            foreach (var t in new List<Tower>(Tower.All)) if (t != null) { t.gameObject.SetActive(false); Destroy(t.gameObject); }
+            foreach (var p in new List<Projectile>(Projectile.All)) if (p != null) { p.gameObject.SetActive(false); Destroy(p.gameObject); }
             if (TowerPlacer.Instance != null) TowerPlacer.Instance.Cancel();
+            dismissMarks.Clear();
+        }
+
+        /// <summary>
+        /// Lost: "Retry floor". Same party, same floor, rewound to the start of its deploy phase (SP and
+        /// stats as they were then). The field starts empty, so you redeploy.
+        /// </summary>
+        public void RetryFloor()
+        {
+            if (State != GameState.GameOver || CurrentFloor == null) return;
+            ClearBoard();
+            SP = floorStartSP;
+            Kills = floorStartKills;
+            AllOutCount = floorStartAllOuts;
+            allOutTimer = 0f;
+            WaveInFloor = 0;
+            WaveGapTimer = 0f;
+            IsPaused = false;
+            GameSpeed = 1;
+            ScanIsBreather = false;
+            SetState(GameState.Scan); // arrival again: the stairs seal, Fuuka scans the floor
+            Banner($"RETRY  -  {FloorTitle(FloorIndex).ToUpperInvariant()}", Color.white);
+        }
+
+        /// <summary>"Retreat": wipes the board and starts the climb again from floor 1 at the party screen (no scene reload).</summary>
+        public void ResetGame()
+        {
+            ClearBoard();
 
             for (int i = 0; i < ranks.Length; i++) ranks[i] = 0;
             SP = startingSP;

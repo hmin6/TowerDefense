@@ -42,6 +42,14 @@ Template: copy this block for each session.
 - **Free Time removed entirely:** the screen, the "after school" line, and all Free Time / day / night / dawn / Clock Tower wording, including the briefing text. The Social Link pick went with it, and the rest of the Social Links are removed in #14.
 - The field limit now follows the floor number.
 - README: the premise line, the "game ends" requirement row, the floors A+ bullet and the controls.
+- **Review fixes (after the first Unity test):**
+  - **Hover bug:** all text lit up under the mouse. The cause was the built-in label style, which has its own hover text colour, while `Text()` only set the normal one. `Text()` now sets the colour on every interaction state, and the base style's hover/active backgrounds are cleared, so only buttons and cards react to the mouse.
+  - **Losing now offers two choices.** **Retry floor** (Enter) uses the same party on the same floor, rewound to the start of its deploy phase (SP, kills and All-Out count as they were then), with an empty field. **Retreat** (R) restarts the climb from Floor 1, with the party chosen again.
+- Decisions recorded in STORY.md and the issues, not built yet:
+  - every floor gets its own Tziah layout, and towers no longer carry over (a new M1 issue)
+  - placement is anywhere beside the path
+  - SP is now individual per member, with Makoto's Personas sharing one pool (#10 and #11)
+  - a story intro and a Floor 1 tutorial (a new M4 issue)
 
 ### Problems & fixes
 - `ShadowsRemaining` had to count the waves still queued on the floor, not only the current one, so the HUD doesn't show 0 between waves.

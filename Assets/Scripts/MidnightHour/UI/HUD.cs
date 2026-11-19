@@ -151,7 +151,7 @@ namespace MidnightHour
             if (gm.IsPaused)
             {
                 Fill(new Rect(0, H * 0.5f - 50, W, 100), new Color(0, 0, 0, 0.7f));
-                Text(new Rect(0, H * 0.5f - 50, W, 100), "PAUSED   -   Space: resume    R: restart", sBanner, White);
+                Text(new Rect(0, H * 0.5f - 50, W, 100), "PAUSED   -   Space: resume    R: retreat (restart the climb)", sBanner, White);
             }
         }
 
@@ -159,7 +159,8 @@ namespace MidnightHour
         {
             stylesBuilt = true;
             sBody = new GUIStyle(GUI.skin.label) { fontSize = 20, wordWrap = true, richText = false };
-            sBody.normal.textColor = White;
+            StripInteractionStates(sBody); // every other style is copied from sBody
+            SetTextColor(sBody, White);
             sSmall = new GUIStyle(sBody) { fontSize = 16 };
             sTiny = new GUIStyle(sBody) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = false };
             sHeader = new GUIStyle(sBody) { fontSize = 28, fontStyle = FontStyle.Bold, wordWrap = false };
@@ -186,17 +187,43 @@ namespace MidnightHour
 
         void Block(Rect r) { blockers.Add(r); }
 
+        /// <summary>
+        /// Plain text. The colour is set on EVERY interaction state, because the built-in label style
+        /// has its own hover colour: without this, any text under the mouse (and its shadow) would
+        /// "light up" as if it were clickable. Only buttons and cards draw a hover look.
+        /// </summary>
         void Text(Rect r, string s, GUIStyle st, Color c, bool shadow = true)
         {
-            Color old = st.normal.textColor;
             if (shadow)
             {
-                st.normal.textColor = new Color(0f, 0f, 0f, 0.85f * c.a);
+                SetTextColor(st, new Color(0f, 0f, 0f, 0.85f * c.a));
                 GUI.Label(new Rect(r.x + 2f, r.y + 2f, r.width, r.height), s, st);
             }
-            st.normal.textColor = c;
+            SetTextColor(st, c);
             GUI.Label(r, s, st);
-            st.normal.textColor = old;
+        }
+
+        static void SetTextColor(GUIStyle st, Color c)
+        {
+            st.normal.textColor = c;
+            st.hover.textColor = c;
+            st.active.textColor = c;
+            st.focused.textColor = c;
+            st.onNormal.textColor = c;
+            st.onHover.textColor = c;
+            st.onActive.textColor = c;
+            st.onFocused.textColor = c;
+        }
+
+        /// <summary>Labels never draw a hover/active background either.</summary>
+        static void StripInteractionStates(GUIStyle st)
+        {
+            st.hover.background = null;
+            st.active.background = null;
+            st.focused.background = null;
+            st.onHover.background = null;
+            st.onActive.background = null;
+            st.onFocused.background = null;
         }
 
         /// <summary>Runs draw() rotated around a pivot (virtual coords) - the slanted "persona" look.</summary>
@@ -848,10 +875,25 @@ namespace MidnightHour
             });
             string stats = won
                 ? $"S.E.E.S. broke all {gm.Floors.Count} seals.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}"
-                : $"A Shadow broke through to the team on {gm.FloorTitle(gm.FloorIndex)}. S.E.E.S. retreats from Tartarus.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}";
+                : $"A Shadow broke through to the team on {gm.FloorTitle(gm.FloorIndex)}.\nShadows defeated: {gm.Kills}     All-Out Attacks: {gm.AllOutCount}";
             Text(new Rect(0f, 470f, W, 80f), stats, sCenter, White);
-            if (Button(new Rect((W - 380f) * 0.5f, 600f, 380f, 72f), won ? "PLAY AGAIN   [R]" : "TRY AGAIN   [R]", Red, White))
-                gm.ResetGame();
+
+            if (won)
+            {
+                if (Button(new Rect((W - 380f) * 0.5f, 600f, 380f, 72f), "PLAY AGAIN   [R]", Red, White)) gm.ResetGame();
+                return;
+            }
+
+            // Lost: retry this floor with the same party, or retreat and start the climb over.
+            const float bw = 400f, gap = 40f;
+            float x0 = (W - (bw * 2f + gap)) * 0.5f;
+            Rect retry = new Rect(x0, 600f, bw, 72f), retreat = new Rect(x0 + bw + gap, 600f, bw, 72f);
+            if (Button(retry, "RETRY FLOOR   [Enter]", Red, White)) gm.RetryFloor();
+            if (Button(retreat, "RETREAT   [R]", new Color(0.22f, 0.22f, 0.26f), White)) gm.ResetGame();
+            Text(new Rect(retry.x, retry.yMax + 16f, bw, 50f),
+                 $"{gm.FloorTitle(gm.FloorIndex)} again with the same party.\nThe field starts empty: redeploy.", sCenter, Grey);
+            Text(new Rect(retreat.x, retreat.yMax + 16f, bw, 50f),
+                 "Leave Tartarus and climb again from Floor 1.\nYou choose the party again.", sCenter, Grey);
         }
     }
 }
