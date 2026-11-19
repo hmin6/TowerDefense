@@ -142,7 +142,7 @@ Fuuka is the **navigator** (Lucia), not a tower. She scans and talks to the team
 | Mitsuru | Penthesilea | Bufu | **Controller** | Slows the Shadows she hits | **Mabufu:** ice on an area, with a chance to freeze |
 | Aigis | Palladion | Pierce | **Sniper** | Longest range; bullets pierce through a line of Shadows | **Orgia Mode:** huge fire-rate boost for a few seconds, then a short overheat |
 | Ken | Nemesis | Hama | **Executioner** | Chance to instantly kill weakened, non-boss Shadows | **Hama** family: light on an area, instant-kill chance |
-| Koromaru | Cerberus | Mudo / Agi | **Debuffer** | Curses Shadows, so they take more damage from everyone | **Mudo** family: curses every Shadow in an area **[CHECK]** |
+| Koromaru | Cerberus | Mudo (Agi is secondary flavor only) | **Debuffer** | Curses Shadows, so they take more damage from everyone | **Mudo** family: curses every Shadow in an area **[CHECK]** |
 | Shinjiro | Castor | Strike | **Tank buster** | Very slow but massive physical hits; bonus damage to high-HP Shadows | **[CHECK]** His heavy physical skill |
 
 ### Makoto's Personas (from *Persona 3 The Movie*)
@@ -162,6 +162,8 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 | Lakshmi *(game)* | Empress (Mitsuru) | Bufu | **Resistance breaker** | Shadows near it lose their resistance, so resisted elements do normal damage |
 | Pixie *(game)* | Lovers (Yukari) | Zio | **Multishot** | Fires small shots at up to 3 Shadows at once |
 | Valkyrie *(game)* | Strength (Koromaru) | Slash | **Interceptor** | Targets the fastest Shadow in range first and hits fast Shadows harder |
+
+**Sarasvati** is Neutral: her shots have no element.
 
 **Filling the gaps:** the movies don't show Makoto with a Persona of the Empress, Lovers or Strength Arcana before September. For those three, Lakshmi, Pixie and Valkyrie (marked *game*) are taken from the game's Persona list for that Arcana instead. That gives Makoto one Persona for every S.E.E.S. Arcana, with Hierophant getting two.
 
@@ -186,7 +188,7 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 ---
 
 ## Approval
-- [ ] Premise approved (September, base Personas, no evolutions)
+- [x] Premise approved (September, base Personas, no evolutions)
 - [x] Party swapping between floors (proposed: yes, at the break)
 - [x] Makoto picks freely; suppression limits only the total on the field
 - [x] Field limit numbers per floor confirmed
