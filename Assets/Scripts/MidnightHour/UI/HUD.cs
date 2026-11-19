@@ -46,6 +46,7 @@ namespace MidnightHour
 
         Texture2D tex;
         GUIStyle sBody, sSmall, sHeader, sTitle, sTitleCenter, sCenter, sBanner, sFloat, sButton, sTiny;
+        GUIStyle sCardTitle, sMini, sTagRight;
         bool stylesBuilt;
 
         void Awake()
@@ -140,6 +141,7 @@ namespace MidnightHour
             switch (gm.State)
             {
                 case GameState.Briefing: DrawBriefing(gm); break;
+                case GameState.PartySelect: DrawPartySelect(gm); break;
                 case GameState.FreeTime: DrawFreeTime(gm); break;
                 case GameState.Victory: DrawEnd(gm, true); break;
                 case GameState.GameOver: DrawEnd(gm, false); break;
@@ -166,6 +168,9 @@ namespace MidnightHour
             sBanner = new GUIStyle(sHeader) { fontSize = 60, fontStyle = FontStyle.BoldAndItalic, alignment = TextAnchor.MiddleCenter };
             sFloat = new GUIStyle(sHeader) { fontSize = 22, alignment = TextAnchor.MiddleCenter };
             sButton = new GUIStyle(sHeader) { fontSize = 26, alignment = TextAnchor.MiddleCenter };
+            sCardTitle = new GUIStyle(sBody) { fontSize = 18, fontStyle = FontStyle.Bold, wordWrap = false, clipping = TextClipping.Clip };
+            sMini = new GUIStyle(sBody) { fontSize = 14, wordWrap = false, clipping = TextClipping.Clip };
+            sTagRight = new GUIStyle(sBody) { fontSize = 15, fontStyle = FontStyle.Bold, wordWrap = false, alignment = TextAnchor.UpperRight };
         }
 
         // ---- primitives
@@ -306,6 +311,7 @@ namespace MidnightHour
                     case GameState.Night: phase = "THE DARK HOUR"; break;
                     case GameState.Planning: phase = "PREPARATION - place towers, then begin the night"; break;
                     case GameState.FreeTime: phase = "FREE TIME"; break;
+                    case GameState.PartySelect: phase = "PARTY - choose who climbs with Makoto"; break;
                     case GameState.Victory: phase = "VICTORY"; break;
                     case GameState.GameOver: phase = "GAME OVER"; break;
                     default: phase = ""; break;
@@ -351,40 +357,116 @@ namespace MidnightHour
             Fill(new Rect(r.x, r.y, r.width, 6), Red);
             Text(new Rect(r.x + 18, r.y + 16, w - 36, 36), "HOW TO PLACE TOWERS", sHeader, White);
             string body =
-                "1.  Press 1, 2 or 3 (or click a card at the bottom) to pick a tower.\n" +
+                "1.  Pick a Persona: 1, 2 or 3 for your party members, 4 to cycle Makoto's Personas, " +
+                "or click a card at the bottom (hover a card for its stats).\n" +
                 "2.  Move the mouse over the ground. GREEN ghost = valid spot, RED = blocked.\n" +
                 "3.  LEFT-CLICK to place it. The ring shows its range.\n" +
                 "4.  RIGHT-CLICK or Esc to stop placing.\n\n" +
-                $"Towers cost SP and you may only have {gm.TowerLimit} at a time. " +
-                "Hover a tower and press X to dismiss it (50% refund).";
+                $"Placing is free, but only {gm.TowerLimit} towers fit on the field at once. " +
+                "Hover a tower and press X to dismiss it.";
             Text(new Rect(r.x + 18, r.y + 60, w - 36, 240), body, sSmall, White);
             Text(new Rect(r.x + 18, r.yMax - 36, w - 36, 28), "Shadow eye colour = its weakness.     [H] hide", sSmall, Gold);
         }
 
+        // Tower bar layout (virtual 1080p): Makoto's row at the bottom, the party row above it,
+        // and the start button above both.
+        const float BarBottom = 16f, MiniH = 80f, PartyCardW = 330f, PartyCardH = 104f, RowLabelH = 24f;
+        static float MakotoRowY { get { return H - BarBottom - MiniH; } }
+        static float PartyRowY { get { return MakotoRowY - RowLabelH - 6f - PartyCardH; } }
+        static float StartButtonY { get { return PartyRowY - RowLabelH - 10f - 60f; } }
+
         void DrawTowerCards(GameManager gm)
         {
-            int n = gm.Towers.Count;
-            const float cw = 340f, ch = 190f, gap = 16f;
-            float total = n * cw + (n - 1) * gap;
-            float x0 = (W - total) * 0.5f;
-            float y = H - ch - 20f;
             var placer = TowerPlacer.Instance;
+            bool full = gm.TowerCount >= gm.TowerLimit;
+            Color dimmed = new Color(0, 0, 0, 0.45f);
+            TowerDef hovered = null;
+            Rect hoveredRect = default;
+            Vector2 mouse = Event.current.mousePosition;
 
-            for (int i = 0; i < n; i++)
+            // Party row: the members' Personas, keys 1-3.
+            int members = gm.MemberTowerCount;
+            const float gap = 14f;
+            float px0 = (W - (members * PartyCardW + (members - 1) * gap)) * 0.5f;
+            if (members > 0)
+                RowLabel(new Rect(px0, PartyRowY - RowLabelH, members * PartyCardW + (members - 1) * gap, RowLabelH),
+                         "PARTY   [1] [2] [3]");
+            for (int i = 0; i < members; i++)
             {
                 var d = gm.Towers[i];
-                Rect r = new Rect(x0 + i * (cw + gap), y, cw, ch);
+                Rect r = new Rect(px0 + i * (PartyCardW + gap), PartyRowY, PartyCardW, PartyCardH);
                 bool selected = placer != null && placer.Selected == i;
-                bool afford = gm.SP >= d.cost && gm.TowerCount < gm.TowerLimit;
-                string title = $"[{i + 1}] {d.displayName}";
                 string body =
-                    $"{ElementInfo.Label(d.element)}   |   {d.cost} SP\n" +
-                    $"Rate {gm.EffectiveFireRate(d):0.0}/s   Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " (arc)" : "")}\n" +
-                    $"Height {d.height:0.0} m   Range {d.range:0.#} m   Dmg {gm.EffectiveDamage(d):0}\n" +
-                    d.description;
-                if (Card(r, title, body, d.color, selected) && placer != null) placer.Select(i);
-                if (!afford) Fill(r, new Color(0, 0, 0, 0.45f));
+                    $"{gm.MemberName(d.user)}  ·  {ElementInfo.Label(d.element)}  ·  {DefInfo.RoleLabel(d.role)}\n" +
+                    $"Rate {gm.EffectiveFireRate(d):0.0#}/s  ·  Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " arc" : "")}  ·  H {d.height:0.0} m";
+                if (Card(r, $"[{i + 1}] {d.displayName}", body, d.color, selected) && placer != null) placer.Select(i);
+                if (full) Fill(r, dimmed);
+                if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
             }
+
+            // Makoto's row: the Wild Card's Personas, key 4 cycles.
+            int n = gm.Towers.Count - members;
+            if (n > 0)
+            {
+                const float mgap = 8f;
+                float cw = Mathf.Min(156f, (W - 40f - (n - 1) * mgap) / n);
+                float mx0 = (W - (n * cw + (n - 1) * mgap)) * 0.5f;
+                RowLabel(new Rect(mx0, MakotoRowY - RowLabelH, n * cw + (n - 1) * mgap, RowLabelH),
+                         "MAKOTO  ·  WILD CARD   [4] cycle, or click");
+                for (int k = 0; k < n; k++)
+                {
+                    int i = members + k;
+                    var d = gm.Towers[i];
+                    Rect r = new Rect(mx0 + k * (cw + mgap), MakotoRowY, cw, MiniH);
+                    bool selected = placer != null && placer.Selected == i;
+                    if (MiniCard(r, d.displayName, ElementInfo.Label(d.element), DefInfo.RoleLabel(d.role),
+                                 d.color, ElementInfo.GetColor(d.element), selected) && placer != null)
+                        placer.Select(i);
+                    if (full) Fill(r, dimmed);
+                    if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
+                }
+            }
+
+            if (hovered != null) DrawTowerTooltip(gm, hovered, hoveredRect);
+        }
+
+        void RowLabel(Rect r, string text)
+        {
+            Block(r);
+            Text(r, text, sMini, Gold);
+        }
+
+        bool MiniCard(Rect r, string title, string line1, string line2, Color accent, Color line1Color, bool selected)
+        {
+            Block(r);
+            bool hover = r.Contains(Event.current.mousePosition);
+            Fill(r, selected ? new Color(0.55f, 0.03f, 0.08f, 0.96f) : hover ? new Color(0.14f, 0.14f, 0.16f, 0.95f) : Panel);
+            Fill(new Rect(r.x, r.y, r.width, 6), accent);
+            Text(new Rect(r.x + 8, r.y + 10, r.width - 12, 24), title, sCardTitle, White);
+            Text(new Rect(r.x + 8, r.y + 34, r.width - 12, 20), line1, sMini, line1Color);
+            Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), line2, sMini, Grey);
+            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+        }
+
+        /// <summary>Full stats for the hovered card, floating just above it.</summary>
+        void DrawTowerTooltip(GameManager gm, TowerDef d, Rect anchor)
+        {
+            const float w = 460f, h = 156f;
+            float x = Mathf.Clamp(anchor.center.x - w * 0.5f, 10f, W - w - 10f);
+            Rect r = new Rect(x, anchor.y - h - 8f, w, h);
+            Fill(r, new Color(0.02f, 0.02f, 0.03f, 0.97f));
+            Fill(new Rect(r.x, r.y, 8, r.height), d.color);
+            string who = d.user == PartyMember.Makoto ? "Makoto (Wild Card)" : gm.MemberName(d.user);
+            Text(new Rect(r.x + 20, r.y + 8, w - 30, 30), d.displayName, sHeader, White);
+            Text(new Rect(r.x + 20, r.y + 40, w - 30, 22),
+                 $"{who}  ·  {DefInfo.ArcanaLabel(d.arcana)}  ·  {ElementInfo.Label(d.element)}", sMini, Gold);
+            string extra = (d.splashRadius > 0.01f ? $"   Splash {d.splashRadius:0.#} m" : "") +
+                           (d.slowDuration > 0f ? $"   Slow {Mathf.RoundToInt((1f - d.slowMultiplier) * 100f)}%" : "");
+            string stats =
+                $"Rate {gm.EffectiveFireRate(d):0.0#}/s   Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " (arc)" : "")}   Height {d.height:0.0} m\n" +
+                $"Range {d.range:0.#} m   Dmg {gm.EffectiveDamage(d):0}{extra}\n" +
+                d.description;
+            Text(new Rect(r.x + 20, r.y + 64, w - 30, h - 68), stats, sSmall, new Color(0.88f, 0.88f, 0.9f));
         }
 
         void DrawPlacementHint(GameManager gm)
@@ -403,14 +485,15 @@ namespace MidnightHour
             else if (p.HoveredTower != null)
             {
                 var t = p.HoveredTower;
+                int refund = gm.RefundFor(t);
                 Text(new Rect(m.x + 26, m.y + 14, 640, 30),
-                     $"{t.Def.displayName}  -  X: dismiss (+{gm.RefundFor(t)} SP)", sBody, White);
+                     $"{t.Def.displayName}  -  X: dismiss{(refund > 0 ? $" (+{refund} SP)" : "")}", sBody, White);
             }
         }
 
         void DrawStartButton(GameManager gm)
         {
-            Rect r = new Rect((W - 500f) * 0.5f, H - 190f - 20f - 84f, 500f, 64f);
+            Rect r = new Rect((W - 500f) * 0.5f, StartButtonY, 500f, 60f);
             if (Button(r, ">>  BEGIN THE DARK HOUR   [Enter]", Red, White)) gm.StartNight();
         }
 
@@ -462,8 +545,72 @@ namespace MidnightHour
             Text(new Rect((W - w) * 0.5f, 400f, w, 300f), story, sCenter, White);
 
             if (Button(new Rect((W - 380f) * 0.5f, 760f, 380f, 72f), "START   [Enter]", Red, White)) gm.BeginGame();
-            Text(new Rect(0f, 860f, W, 30f), "1/2/3 pick tower  -  Left-click place  -  Right-click cancel  -  Enter start night  -  Space pause  -  F speed",
+            Text(new Rect(0f, 860f, W, 30f), "1-3 party Persona  -  4 Makoto's Personas  -  Left-click place  -  Right-click cancel  -  Enter start night  -  Space pause  -  F speed",
                  sCenter, Grey);
+        }
+
+        void DrawPartySelect(GameManager gm)
+        {
+            Dim();
+            bool first = gm.IsFirstPartySelect;
+            int need = gm.PartySizeRequired;
+            string next = gm.WaveIndex < gm.Waves.Count ? gm.Waves[gm.WaveIndex].title : "";
+            Slanted(-3f, new Vector2(W * 0.5f, 150f), () =>
+            {
+                Fill(new Rect(-100f, 90f, W + 200f, 120f), Red);
+                Text(new Rect(0f, 98f, W, 70f), first ? "CHOOSE YOUR PARTY" : "CHANGE THE PARTY?", sBanner, White);
+                Text(new Rect(0f, 166f, W, 34f),
+                     first ? $"Makoto leads. Pick {need} members to climb with him."
+                           : $"A short breather before {next}. Swap members, or keep the team.",
+                     sCenter, White);
+            });
+
+            // Makoto: fixed leader.
+            Rect lead = new Rect((W - 900f) * 0.5f, 236f, 900f, 70f);
+            Block(lead);
+            Fill(lead, Panel);
+            Fill(new Rect(lead.x, lead.y, 10, lead.height), Red);
+            Text(new Rect(lead.x + 24, lead.y + 8, lead.width - 34, 28), "MAKOTO   ·   Leader, always in the party", sCardTitle, White);
+            Text(new Rect(lead.x + 24, lead.y + 38, lead.width - 34, 24),
+                 $"Wild Card: he can field any of his {gm.MakotoPersonas.Count} Personas (bottom row of the tower bar).", sSmall, Gold);
+
+            // The 8 members, 4 x 2.
+            const int cols = 4;
+            const float ch = 160f, gap = 18f, y0 = 330f;
+            float cw = Mathf.Min(410f, (W - 80f - (cols - 1) * gap) / cols);
+            float x0 = (W - (cols * cw + (cols - 1) * gap)) * 0.5f;
+            int count = gm.PartyCount;
+            for (int i = 0; i < gm.Members.Count; i++)
+            {
+                var m = gm.Members[i];
+                var p = m.persona;
+                Rect r = new Rect(x0 + (i % cols) * (cw + gap), y0 + (i / cols) * (ch + gap), cw, ch);
+                bool inParty = gm.IsInParty(m.id);
+                string key = i < 8 ? $"[{i + 1}] " : "";
+                string body = $"{p.displayName}  ·  {DefInfo.ArcanaLabel(p.arcana)}  ·  {ElementInfo.Label(p.element)}\n{p.description}";
+                if (Card(r, key + m.displayName.ToUpperInvariant(), body, p.color, inParty)) gm.TogglePartyMember(i);
+                if (inParty) Text(new Rect(r.xMax - 130f, r.yMax - 28f, 120f, 24f), "IN PARTY", sTagRight, Gold);
+                else if (count >= need) Fill(r, new Color(0, 0, 0, 0.45f));
+            }
+
+            float infoY = y0 + 2f * (ch + gap) + 4f;
+            string status = count < need ? $"Party: {count} / {need}   -   pick {need - count} more."
+                                         : $"Party: {count} / {need}   -   full. Click a member to take them out.";
+            Text(new Rect(0f, infoY, W, 30f), status, sCenter, count == need ? Gold : White);
+
+            if (!first)
+            {
+                var leaving = gm.TowersLeavingField();
+                if (leaving.Count > 0)
+                    Text(new Rect(0f, infoY + 32f, W, 30f), "Leaving the field: " + string.Join(", ", leaving),
+                         sCenter, new Color(1f, 0.55f, 0.55f));
+            }
+
+            bool ok = gm.CanConfirmParty;
+            Rect btn = new Rect((W - 440f) * 0.5f, infoY + 80f, 440f, 68f);
+            if (Button(btn, first ? "ENTER TARTARUS   [Enter]" : "CONTINUE   [Enter]", ok ? Red : new Color(0.3f, 0.3f, 0.32f), White) && ok)
+                gm.ConfirmParty();
+            Text(new Rect(0f, btn.yMax + 18f, W, 30f), "Press 1-8 or click a member to add or remove them.   Enter to confirm.", sCenter, Grey);
         }
 
         void DrawFreeTime(GameManager gm)

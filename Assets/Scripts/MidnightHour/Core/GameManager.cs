@@ -3,14 +3,15 @@ using UnityEngine;
 
 namespace MidnightHour
 {
-    public enum GameState { Briefing, Planning, Night, FreeTime, Victory, GameOver }
+    public enum GameState { Briefing, Planning, Night, FreeTime, Victory, GameOver, PartySelect }
 
     /// <summary>Persona-style "Social Links" you rank up between nights.</summary>
     public enum SocialLink { Magician, Empress, Chariot, Fool }
 
     /// <summary>
     /// Game rules and flow:
-    /// Briefing -> Planning (place towers) -> Night (wave) -> FreeTime (rank a Social Link) -> Planning ...
+    /// Briefing -> PartySelect (Makoto + 3) -> Planning (place towers) -> Night (wave)
+    ///   -> FreeTime (rank a Social Link) -> PartySelect (swap members) -> Planning ...
     /// The game ends the moment any Shadow reaches the Clock Tower.
     /// </summary>
     [DefaultExecutionOrder(-50)]
@@ -25,6 +26,10 @@ namespace MidnightHour
         public float weaknessMultiplier = 1.5f;
         public float resistMultiplier = 0.5f;
         public float knockdownDuration = 1.6f;
+
+        [Header("Party (STORY.md §2)")]
+        [Tooltip("How many members join Makoto. STORY.md: 3. Keys 1-3 pick their Personas, so 3 is the maximum.")]
+        [Range(1, 3)] public int partySize = 3;
 
         [Header("Social Links (per rank)")]
         public float rankDamageBonus = 0.25f;
@@ -47,7 +52,10 @@ namespace MidnightHour
         public AudioClip gameOverSound;
         public AudioClip victorySound;
 
+        /// <summary>What the player can place right now: the party members' Personas first, then Makoto's.</summary>
         public List<TowerDef> Towers { get; private set; } = new List<TowerDef>();
+        /// <summary>How many entries at the start of <see cref="Towers"/> belong to party members (keys 1-3).</summary>
+        public int MemberTowerCount { get; private set; }
         public List<EnemyDef> Enemies { get; private set; } = new List<EnemyDef>();
         public List<WaveDef> Waves { get; private set; } = new List<WaveDef>();
         public List<MemberDef> Members { get; private set; } = new List<MemberDef>();
@@ -67,7 +75,11 @@ namespace MidnightHour
         public bool CanPlaceNow { get { return State == GameState.Planning || State == GameState.Night; } }
         public bool IsModalState
         {
-            get { return State == GameState.Briefing || State == GameState.FreeTime || State == GameState.Victory || State == GameState.GameOver; }
+            get
+            {
+                return State == GameState.Briefing || State == GameState.PartySelect || State == GameState.FreeTime ||
+                       State == GameState.Victory || State == GameState.GameOver;
+            }
         }
         public int ShadowsRemaining
         {
@@ -75,6 +87,8 @@ namespace MidnightHour
         }
 
         readonly int[] ranks = new int[4];
+        // The members chosen to go with Makoto. Kept across restarts so the last party is preselected.
+        readonly List<PartyMember> party = new List<PartyMember>();
         WaveSpawner spawner;
         AudioSource sfx;
         float allOutTimer;
@@ -93,9 +107,8 @@ namespace MidnightHour
             Time.timeScale = 1f;
         }
 
-        public void Configure(List<TowerDef> towers, List<EnemyDef> enemies, List<WaveDef> waves, WaveSpawner waveSpawner)
+        public void Configure(List<EnemyDef> enemies, List<WaveDef> waves, WaveSpawner waveSpawner)
         {
-            Towers = towers;
             Enemies = enemies;
             Waves = waves;
             spawner = waveSpawner;
@@ -103,7 +116,7 @@ namespace MidnightHour
             Time.timeScale = 1f;
         }
 
-        /// <summary>The S.E.E.S. roster. Not placeable yet: party selection (#2) turns it into the tower bar.</summary>
+        /// <summary>The S.E.E.S. roster. Party selection turns it into the placeable <see cref="Towers"/>.</summary>
         public void ConfigureRoster(List<MemberDef> members, List<TowerDef> makotoPersonas)
         {
             Members = members ?? new List<MemberDef>();
@@ -129,6 +142,15 @@ namespace MidnightHour
             {
                 if (State == GameState.Briefing) BeginGame();
                 else if (State == GameState.Planning) StartNight();
+                else if (State == GameState.PartySelect) ConfirmParty();
+            }
+
+            // Keys 1-8 toggle members. Skip the frame the screen opened, so the key that closed
+            // Free Time (1-4) doesn't also toggle a member.
+            if (State == GameState.PartySelect && Time.frameCount != StateChangedFrame)
+            {
+                for (int i = 0; i < PartyKeys.Length; i++)
+                    if (InputCompat.Down(PartyKeys[i])) TogglePartyMember(i);
             }
 
             if (State == GameState.FreeTime)
@@ -212,7 +234,8 @@ namespace MidnightHour
         {
             if (State != GameState.FreeTime) return;
             ranks[(int)link]++;
-            SetState(GameState.Planning);
+            // The break between nights continues on the party screen, where members can be swapped.
+            SetState(GameState.PartySelect);
             Banner($"{link.ToString().ToUpperInvariant()}  RANK {ranks[(int)link]}", new Color(1f, 0.85f, 0.2f));
         }
 
@@ -233,7 +256,7 @@ namespace MidnightHour
             PlaySfx(killSound, 0.5f);
         }
 
-        /// <summary>Wipes the board and starts again from Day 1 (no scene reload needed).</summary>
+        /// <summary>Wipes the board and starts again from Day 1 at the party screen (no scene reload needed).</summary>
         public void ResetGame()
         {
             if (spawner != null) spawner.Stop();
@@ -250,8 +273,83 @@ namespace MidnightHour
             allOutTimer = 0f;
             IsPaused = false;
             GameSpeed = 1;
+            // Like entering Tartarus: pick who goes in. The last party stays preselected.
+            SetState(GameState.PartySelect);
+        }
+
+        // ------------------------------------------------------------ Party (STORY.md §2)
+
+        static readonly GameKey[] PartyKeys =
+        {
+            GameKey.Tower1, GameKey.Tower2, GameKey.Tower3, GameKey.Choice4,
+            GameKey.Choice5, GameKey.Choice6, GameKey.Choice7, GameKey.Choice8,
+        };
+
+        /// <summary>Members needed besides Makoto (fewer only if the roster is smaller than the party size).</summary>
+        public int PartySizeRequired { get { return Mathf.Min(partySize, Members.Count); } }
+        public int PartyCount { get { return party.Count; } }
+        public bool CanConfirmParty { get { return State == GameState.PartySelect && party.Count == PartySizeRequired; } }
+        /// <summary>True before the climb starts; false at a break between nights.</summary>
+        public bool IsFirstPartySelect { get { return WaveIndex == 0; } }
+
+        public bool IsInParty(PartyMember id) { return party.Contains(id); }
+
+        /// <summary>Adds or removes a member (index into Members). Returns false if the party is already full.</summary>
+        public bool TogglePartyMember(int memberIndex)
+        {
+            if (State != GameState.PartySelect || memberIndex < 0 || memberIndex >= Members.Count) return false;
+            var id = Members[memberIndex].id;
+            if (party.Remove(id)) return true;
+            if (party.Count >= PartySizeRequired) return false;
+            party.Add(id);
+            return true;
+        }
+
+        /// <summary>Makoto's Personas always stay; a member's tower stays only while they're in the party.</summary>
+        bool CanStayOnField(TowerDef def)
+        {
+            return def.user == PartyMember.Makoto || party.Contains(def.user);
+        }
+
+        /// <summary>Placed towers that confirming the current party would remove, as "Io (Yukari)".</summary>
+        public List<string> TowersLeavingField()
+        {
+            var names = new List<string>();
+            foreach (var t in Tower.All)
+                if (t != null && t.Def != null && !CanStayOnField(t.Def))
+                    names.Add($"{t.Def.displayName} ({MemberName(t.Def.user)})");
+            return names;
+        }
+
+        public string MemberName(PartyMember id)
+        {
+            if (id == PartyMember.Makoto) return "Makoto";
+            foreach (var m in Members) if (m.id == id) return m.displayName;
+            return id.ToString();
+        }
+
+        /// <summary>Locks in the party: rebuilds the tower bar and withdraws swapped-out members' towers.</summary>
+        public void ConfirmParty()
+        {
+            if (!CanConfirmParty) return;
+
+            var placeable = new List<TowerDef>();
+            foreach (var m in Members)                       // roster order, so keys 1-3 are predictable
+                if (party.Contains(m.id) && m.persona != null) placeable.Add(m.persona);
+            MemberTowerCount = placeable.Count;
+            placeable.AddRange(MakotoPersonas);
+            Towers = placeable;
+
+            foreach (var t in new List<Tower>(Tower.All))
+            {
+                if (t == null || t.Def == null || CanStayOnField(t.Def)) continue;
+                Flash.Spawn(t.transform.position + Vector3.up, Color.white, 1.2f, 0.3f);
+                Destroy(t.gameObject);
+            }
+            if (TowerPlacer.Instance != null) TowerPlacer.Instance.Cancel();
+
             SetState(GameState.Planning);
-            if (Waves.Count > 0) Banner(Waves[0].title.ToUpperInvariant(), Color.white);
+            if (WaveIndex < Waves.Count) Banner(Waves[WaveIndex].title.ToUpperInvariant(), Color.white);
         }
 
         // ------------------------------------------------------------ Towers

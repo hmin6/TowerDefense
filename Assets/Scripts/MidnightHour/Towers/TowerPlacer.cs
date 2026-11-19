@@ -3,7 +3,8 @@ using UnityEngine;
 namespace MidnightHour
 {
     /// <summary>
-    /// Mouse placement: pick a tower (1/2/3 or click a card), a ghost follows the cursor
+    /// Mouse placement: pick a tower (1-3 = party members' Personas, 4 = cycle Makoto's Personas,
+    /// or click a card), a ghost follows the cursor
     /// (green = valid, red = blocked) with its range ring, left-click places, right-click / Esc cancels.
     /// With nothing selected, hover a tower and press X to dismiss it for a partial refund.
     /// </summary>
@@ -61,6 +62,19 @@ namespace MidnightHour
             lastTint = -1;
         }
 
+        /// <summary>Key 4: step through Makoto's Personas (the Wild Card), wrapping around.</summary>
+        public void CycleWildCard()
+        {
+            var gm = GameManager.Instance;
+            if (gm == null) return;
+            int first = gm.MemberTowerCount;
+            int count = gm.Towers.Count - first;
+            if (count <= 0) return;
+            int next = Selected >= first ? first + (Selected - first + 1) % count : first;
+            if (next == Selected) return; // only one Persona: keep it selected
+            Select(next);
+        }
+
         public void Cancel()
         {
             Selected = -1;
@@ -90,9 +104,11 @@ namespace MidnightHour
             // Ignore keys on the exact frame the state changed (the same key may have closed a menu).
             if (Time.frameCount != gm.StateChangedFrame)
             {
-                if (InputCompat.Down(GameKey.Tower1)) Select(0);
-                if (InputCompat.Down(GameKey.Tower2)) Select(1);
-                if (InputCompat.Down(GameKey.Tower3)) Select(2);
+                int members = gm.MemberTowerCount;
+                if (InputCompat.Down(GameKey.Tower1) && members > 0) Select(0);
+                if (InputCompat.Down(GameKey.Tower2) && members > 1) Select(1);
+                if (InputCompat.Down(GameKey.Tower3) && members > 2) Select(2);
+                if (InputCompat.Down(GameKey.Choice4)) CycleWildCard();
             }
             if (InputCompat.Down(GameKey.Cancel)) Cancel();
 

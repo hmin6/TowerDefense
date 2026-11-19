@@ -8,18 +8,17 @@ namespace MidnightHour
     /// ONE-CLICK SETUP: put this on an empty GameObject in an empty scene and press Play.
     /// It builds the board, path, camera, lighting and every game system at runtime.
     ///
-    /// All tower / enemy / wave stats live in the lists below and are editable in the Inspector.
+    /// All Persona (tower) / enemy / wave stats live in the lists below and are editable in the Inspector.
     /// Right-click the component header > Reset to restore the defaults.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public class GameBootstrap : MonoBehaviour
     {
         [Header("Content")]
-        public List<TowerDef> towers = new List<TowerDef>();
         public List<EnemyDef> enemies = new List<EnemyDef>();
         public List<WaveDef> waves = new List<WaveDef>();
 
-        [Header("S.E.E.S. roster (STORY.md §5; used from party selection, #2, onward)")]
+        [Header("S.E.E.S. roster (STORY.md §5). The chosen party decides what's placeable.")]
         [Tooltip("The 8 members who can join Makoto. Each places one tower: their own Persona.")]
         public List<MemberDef> members = new List<MemberDef>();
         [Tooltip("Makoto's Personas (the Wild Card). He can field each one once.")]
@@ -60,7 +59,6 @@ namespace MidnightHour
 
         void Reset()
         {
-            towers = DefaultContent.Towers();
             enemies = DefaultContent.Enemies();
             waves = DefaultContent.Waves();
             members = DefaultContent.Members();
@@ -70,7 +68,6 @@ namespace MidnightHour
 
         void FillMissing()
         {
-            if (towers == null || towers.Count == 0) towers = DefaultContent.Towers();
             if (enemies == null || enemies.Count == 0) enemies = DefaultContent.Enemies();
             if (waves == null || waves.Count == 0) waves = DefaultContent.Waves();
             if (members == null || members.Count == 0) members = DefaultContent.Members();
@@ -117,7 +114,7 @@ namespace MidnightHour
             gm.killSound = killSound;
             gm.gameOverSound = gameOverSound;
             gm.victorySound = victorySound;
-            gm.Configure(towers, enemies, waves, spawner);
+            gm.Configure(enemies, waves, spawner);
             gm.ConfigureRoster(members, makotoPersonas);
 
             var placer = systems.AddComponent<TowerPlacer>();
