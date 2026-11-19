@@ -29,7 +29,7 @@ namespace MidnightHour
     /// <summary>Where a Persona comes from. Own = a member's own Persona. Movie / Game = how Makoto has it by September.</summary>
     public enum PersonaSource { Own, Movie, Game }
 
-    /// <summary>How a Shadow moves along the path. Behaviour arrives with the Tziah I roster (#5).</summary>
+    /// <summary>How a Shadow moves along the path. Fast = data only (its speed). Flying = hovers above the path.</summary>
     public enum ShadowMovement { Ground, Fast, Flying }
 
     /// <summary>Normal Shadow, a floor finale (Arcane Turret, Sleeping Table), the final boss, or a treasure Shadow.</summary>
@@ -138,6 +138,8 @@ namespace MidnightHour
         public ShadowMovement movement = ShadowMovement.Ground;
         [Tooltip("Boss = can't be knocked down and gets the big health bar.")]
         public ShadowRank rank = ShadowRank.Normal;
+        [Tooltip("Immune to ailments (STORY.md: the Sleeping Table). Today that blocks slows; later ailments (#6, #11) should check it too.")]
+        public bool blocksAilments = false;
         public int spReward = 15;
 
         [Header("Placeholder look (ignored if modelPrefab is set)")]

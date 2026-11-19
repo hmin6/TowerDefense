@@ -31,6 +31,10 @@ namespace MidnightHour
         public float resistMultiplier = 0.5f;
         public float knockdownDuration = 1.6f;
 
+        [Header("Shadows")]
+        [Tooltip("How high flying Shadows (Writhing Tiara, Tranquil Idol) hover above the path, in meters.")]
+        public float flyingHeight = 2.5f;
+
         [Header("Floors")]
         [Tooltip("Seconds between two waves on the same floor (towers can still be placed).")]
         public float wavePause = 4f;

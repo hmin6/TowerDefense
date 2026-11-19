@@ -828,8 +828,9 @@ namespace MidnightHour
                 float x = panel.x + 20;
                 Fill(new Rect(panel.x + 12, y + 4, w - 24, rowH - 8), new Color(1f, 1f, 1f, 0.04f));
                 Fill(new Rect(x, y + 12, 10, rowH - 24), d.IsBoss ? Red : ElementInfo.GetColor(d.PrimaryWeakness));
-                string tags = (d.IsBoss ? "  BOSS" : "") +
-                              (d.movement == ShadowMovement.Fast ? "  FAST" : d.movement == ShadowMovement.Flying ? "  FLYING" : "");
+                string tags = (d.IsBoss ? "  BOSS" : d.rank == ShadowRank.FloorBoss ? "  FLOOR BOSS" : "") +
+                              (d.movement == ShadowMovement.Fast ? "  FAST" : d.movement == ShadowMovement.Flying ? "  FLYING" : "") +
+                              (d.blocksAilments ? "  NO AILMENTS" : "");
                 Text(new Rect(x + 22, y + 8, nameW - 30, 24), d.displayName, sCardTitle, White);
                 Text(new Rect(x + 22, y + 32, nameW - 30, 20), $"x{entry.count}{tags}", sMini, d.IsBoss ? new Color(1f, 0.45f, 0.45f) : Grey);
                 Text(new Rect(x + nameW, y + 18, statW, 22), $"HP {d.maxHP:0}   ·   {d.speed:0.#} m/s", sSmall, new Color(0.88f, 0.88f, 0.9f));

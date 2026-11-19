@@ -26,6 +26,44 @@ Template: copy this block for each session.
 
 ---
 
+## 2026-11-19: #5 Tziah I Shadow roster
+**Time spent:** _(fill in)_
+**Goal:** replace the starter Shadows with the Tziah I lineup from STORY.md §3: their original weaknesses, fast and flying Shadows, and the floor waves with their finales.
+
+### Done
+- Recorded the review decisions in STORY.md and the issues; none of them are built yet:
+  - Retry floor / Retreat (built in PR #24)
+  - a unique Tziah layout per floor with no carry-over (#25)
+  - placement anywhere beside the path
+  - individual SP: spent only on placing and skills, no drain, refilled by weakness hits, Thoth and the Opulent Hand (#9, #10, #11, #15)
+  - a story intro and a Floor 1 tutorial (#26)
+- **Roster:** the 14 Tziah I Shadows, with weaknesses and resistances exactly as in STORY.md (Champion Knight resists Slash, Strike and Pierce). HP and speed are placeholders that follow STORY.md's relations: Drives and Wheels are the fastest, the Arcane Turret has the highest HP of the regular Shadows, and Hakurou Musha is the strongest regular Shadow. The Reaper stays as the floor-6 boss until #12.
+- **Flying:** Writhing Tiara and Tranquil Idol hover `flyingHeight` (2.5 m) above the path. The new `Enemy.RideHeight` is used for path following, prediction and recovery, so towers lead them in 3D. A weakness hit knocks them out of the air with real gravity, and they fly back up afterwards.
+- **Ailments:** the new `EnemyDef.blocksAilments` is set on the Sleeping Table. It blocks slows today, and later ailments (#6, #11) should check it too.
+- **Floors** follow STORY.md §3:
+  - Floor 1: Maya and Sigil
+  - Floor 2: Drive and Wheel
+  - Floor 3: Knights, ending with **3 Arcane Turrets**
+  - Floor 4: Tiara and Idol
+  - Floor 5: Twins, Mother, Relic, Magus and Musha, ending with the **Sleeping Table**
+  - Floor 6: the Reaper with mixed summons (a placeholder for the Jailer)
+- **Fuuka's scan** shows FLOOR BOSS and NO AILMENTS tags.
+- **Old scenes:** `Main.unity` still held the old 4-Shadow list, which the new floors can't index. GameBootstrap now has a `contentVersion` and swaps old saved content for the current defaults (`UpgradeContent`, run in `OnValidate` and `Awake`).
+- README: the enemy types row (requirement A).
+
+### Problems & fixes
+- The scene's serialized `enemies` list always wins over `DefaultContent`, so changing the defaults alone would have left the old Shadows in play, with floors pointing at missing indices. That's why the version upgrade exists.
+
+### AI prompts that mattered
+- "Don't build this yet; just update the docs and issues. Then continue with the current M1 issue."
+
+### Next
+- [ ] Test the PR for #5 after PR #24 (checklist in the PR)
+- [ ] Answer the open questions (ailments, flyers vs. splash and mines, floor-boss behaviour)
+- [ ] #22 camera framing, #25 Tartarus layouts
+
+---
+
 ## 2026-11-18: #4 Floor progression
 **Time spent:** _(fill in)_
 **Goal:** replace nights and Free Time with six sealed floors of Tartarus: arrive, Fuuka's scan, deploy, the floor's waves, seal broken, the stairs breather, the next floor.

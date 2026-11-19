@@ -37,6 +37,17 @@ namespace MidnightHour
         public Vector3 Velocity { get; private set; }
         /// <summary>Distance from the ground to this enemy's center.</summary>
         public float HeightOffset { get; private set; }
+        /// <summary>Height of this enemy's center above the path: HeightOffset, plus the hover height for flying Shadows.</summary>
+        public float RideHeight
+        {
+            get
+            {
+                if (Def == null || Def.movement != ShadowMovement.Flying) return HeightOffset;
+                var gm = GameManager.Instance;
+                return HeightOffset + (gm != null ? gm.flyingHeight : 2.5f);
+            }
+        }
+        public bool IsFlying { get { return Def != null && Def.movement == ShadowMovement.Flying; } }
 
         public bool IsAlive { get { return state != State.Dead; } }
         public bool IsKnockedDown { get { return state == State.KnockedDown; } }
@@ -69,7 +80,7 @@ namespace MidnightHour
             Bounds b = VisualFactory.RendererBounds(gameObject);
             HeightOffset = Mathf.Max(0.1f, -b.min.y);
 
-            Vector3 p = path.Evaluate(0f, out Vector3 dir) + Vector3.up * HeightOffset;
+            Vector3 p = path.Evaluate(0f, out Vector3 dir) + Vector3.up * RideHeight;
             transform.SetPositionAndRotation(p, Flat(dir));
             rb.position = p;
             rb.rotation = transform.rotation;
@@ -87,7 +98,7 @@ namespace MidnightHour
             if (state == State.Walking && path != null)
             {
                 float d = Mathf.Min(Distance + CurrentSpeed * t, path.TotalLength);
-                return path.Evaluate(d, out _) + Vector3.up * HeightOffset;
+                return path.Evaluate(d, out _) + Vector3.up * RideHeight;
             }
             return AimPoint + Velocity * t;
         }
@@ -109,7 +120,7 @@ namespace MidnightHour
                         ReachedGoal();
                         return;
                     }
-                    Vector3 p = path.Evaluate(Distance, out Vector3 dir) + Vector3.up * HeightOffset;
+                    Vector3 p = path.Evaluate(Distance, out Vector3 dir) + Vector3.up * RideHeight;
                     rb.MovePosition(p);
                     rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, Flat(dir), 720f * dt));
                     Velocity = dir * spd;
@@ -128,7 +139,7 @@ namespace MidnightHour
                 }
                 case State.Recovering:
                 {
-                    Vector3 target = path.Evaluate(Distance, out Vector3 dir) + Vector3.up * HeightOffset;
+                    Vector3 target = path.Evaluate(Distance, out Vector3 dir) + Vector3.up * RideHeight;
                     Vector3 next = Vector3.MoveTowards(rb.position, target, RecoverSpeed * dt);
                     Velocity = (next - rb.position) / dt;
                     rb.MovePosition(next);
@@ -144,6 +155,7 @@ namespace MidnightHour
         public void ApplySlow(float multiplier, float duration)
         {
             if (!IsAlive || duration <= 0f) return;
+            if (Def.blocksAilments) return; // e.g. the Sleeping Table blocks all ailments
             slowMultiplier = Mathf.Min(multiplier, slowTimer > 0f ? slowMultiplier : 1f);
             slowTimer = Mathf.Max(slowTimer, duration);
         }
