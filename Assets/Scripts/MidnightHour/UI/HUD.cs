@@ -142,6 +142,7 @@ namespace MidnightHour
             {
                 case GameState.Briefing: DrawBriefing(gm); break;
                 case GameState.PartySelect: DrawPartySelect(gm); break;
+                case GameState.Dismiss: DrawDismiss(gm); break;
                 case GameState.FreeTime: DrawFreeTime(gm); break;
                 case GameState.Victory: DrawEnd(gm, true); break;
                 case GameState.GameOver: DrawEnd(gm, false); break;
@@ -235,7 +236,9 @@ namespace MidnightHour
             return enabled && GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
-        bool Card(Rect r, string title, string body, Color accent, bool selected, bool interactive = true)
+        static readonly Color TagGreen = new Color(0.55f, 1f, 0.65f);
+
+        bool Card(Rect r, string title, string body, Color accent, bool selected, bool interactive = true, string tag = null)
         {
             Block(r);
             bool hover = interactive && r.Contains(Event.current.mousePosition);
@@ -247,6 +250,7 @@ namespace MidnightHour
             Text(new Rect(r.x + 24, r.y + 52, r.width - 34, r.height - 60), body, sSmall,
                  selected ? White : new Color(0.88f, 0.88f, 0.9f));
             if (!interactive) Fill(r, DisabledVeil);
+            if (tag != null) Text(new Rect(r.x + 24, r.yMax - 30, r.width - 34, 24), tag, sCardTitle, TagGreen);
             return interactive && GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
@@ -334,13 +338,14 @@ namespace MidnightHour
                     case GameState.Planning: phase = "PREPARATION - place towers, then begin the night"; break;
                     case GameState.FreeTime: phase = "FREE TIME"; break;
                     case GameState.PartySelect: phase = "PARTY - choose who climbs with Makoto"; break;
+                    case GameState.Dismiss: phase = "THE SEAL TIGHTENS - dismiss towers"; break;
                     case GameState.Victory: phase = "VICTORY"; break;
                     case GameState.GameOver: phase = "GAME OVER"; break;
                     default: phase = ""; break;
                 }
                 Text(new Rect(36, 64, 500, 28), phase, sSmall, Red);
                 Text(new Rect(36, 92, 500, 30),
-                     $"SP {gm.SP}     TOWERS {gm.TowerCount}/{gm.TowerLimit}     SHADOWS {gm.ShadowsRemaining}", sBody, White);
+                     $"SP {gm.SP}     FIELD {gm.TowerCount}/{gm.FieldLimit}     SHADOWS {gm.ShadowsRemaining}", sBody, White);
                 Text(new Rect(36, 122, 500, 26),
                      $"Night {Mathf.Min(gm.WaveIndex + 1, gm.Waves.Count)} of {gm.Waves.Count}     Defeated {gm.Kills}", sSmall, Gold);
             });
@@ -356,8 +361,7 @@ namespace MidnightHour
             string links =
                 $"Magician (Fire)   Rank {gm.Rank(SocialLink.Magician)}\n" +
                 $"Empress (Ice)     Rank {gm.Rank(SocialLink.Empress)}\n" +
-                $"Chariot (Elec)    Rank {gm.Rank(SocialLink.Chariot)}\n" +
-                $"Fool (tower slots) Rank {gm.Rank(SocialLink.Fool)}";
+                $"Chariot (Elec)    Rank {gm.Rank(SocialLink.Chariot)}";
             Text(new Rect(r.x + 16, r.y + 50, r.width - 32, 90), links, sSmall, Gold);
 
             string toggles =
@@ -384,8 +388,8 @@ namespace MidnightHour
                 "2.  Move the mouse over the ground. GREEN ghost = valid spot, RED = blocked.\n" +
                 "3.  LEFT-CLICK to place it. The ring shows its range.\n" +
                 "4.  RIGHT-CLICK or Esc to stop placing.\n\n" +
-                $"Placing is free, but only {gm.TowerLimit} towers fit on the field at once. " +
-                "Hover a tower and press X to dismiss it.";
+                $"Placing is free, but the FIELD LIMIT is {gm.FieldLimit} towers, and it drops as you climb. " +
+                "Each Persona can be on the field once. Hover a tower and press X to dismiss it.";
             Text(new Rect(r.x + 18, r.y + 60, w - 36, 240), body, sSmall, White);
             Text(new Rect(r.x + 18, r.yMax - 36, w - 36, 28), "Shadow eye colour = its weakness.     [H] hide", sSmall, Gold);
         }
@@ -438,8 +442,8 @@ namespace MidnightHour
         {
             var placer = TowerPlacer.Instance;
             var L = LayoutBar(gm);
-            // At the tower limit the cards are disabled (dimmed, no hover, no click) until a tower is dismissed.
-            bool full = gm.TowerCount >= gm.TowerLimit;
+            // A card is disabled (dimmed, no hover, no click) when the field is full or its Persona is already placed.
+            bool full = gm.FieldFull;
             TowerDef hovered = null;
             Rect hoveredRect = default;
             Vector2 mouse = Event.current.mousePosition;
@@ -452,7 +456,7 @@ namespace MidnightHour
                 Rect label = new Rect(px0, L.partyY - RowLabelH, partyRowW, RowLabelH);
                 RowLabel(label, "PARTY   [1] [2] [3]", Gold);
                 if (full)
-                    Text(label, $"Tower limit reached ({gm.TowerLimit}): press X on a tower to dismiss it", sTagRight,
+                    Text(label, $"Field limit reached ({gm.TowerCount}/{gm.FieldLimit}): press X on a tower to dismiss it", sTagRight,
                          new Color(1f, 0.45f, 0.45f));
             }
             for (int i = 0; i < L.members; i++)
@@ -460,10 +464,13 @@ namespace MidnightHour
                 var d = gm.Towers[i];
                 Rect r = new Rect(px0 + i * (PartyCardW + PartyGap), L.partyY, PartyCardW, PartyCardH);
                 bool selected = placer != null && placer.Selected == i;
-                string body =
-                    $"{gm.MemberName(d.user)}  ·  {ElementInfo.Label(d.element)}  ·  {DefInfo.RoleLabel(d.role)}\n" +
-                    $"Rate {gm.EffectiveFireRate(d):0.0#}/s  ·  Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " arc" : "")}  ·  H {d.height:0.0} m";
-                if (Card(r, $"[{i + 1}] {d.displayName}", body, d.color, selected, !full) && placer != null) placer.Select(i);
+                bool placed = gm.IsOnField(d);
+                string body = $"{gm.MemberName(d.user)}  ·  {ElementInfo.Label(d.element)}  ·  {DefInfo.RoleLabel(d.role)}";
+                if (!placed)
+                    body += $"\nRate {gm.EffectiveFireRate(d):0.0#}/s  ·  Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " arc" : "")}  ·  H {d.height:0.0} m";
+                if (Card(r, $"[{i + 1}] {d.displayName}", body, d.color, selected, TowerPlacer.CanPick(gm, i),
+                         placed ? "ON FIELD" : null) && placer != null)
+                    placer.Select(i);
                 if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
             }
 
@@ -482,8 +489,10 @@ namespace MidnightHour
                     var d = gm.Towers[i];
                     Rect r = new Rect(rx0 + col * (L.miniW + MiniGap), L.makotoTop + row * (MiniH + MiniGap), L.miniW, MiniH);
                     bool selected = placer != null && placer.Selected == i;
+                    bool placed = gm.IsOnField(d);
                     if (MiniCard(r, d.displayName, ElementInfo.Label(d.element), DefInfo.RoleLabel(d.role),
-                                 d.color, ElementInfo.GetColor(d.element), selected, !full) && placer != null)
+                                 d.color, ElementInfo.GetColor(d.element), selected, TowerPlacer.CanPick(gm, i),
+                                 placed ? "ON FIELD" : null) && placer != null)
                         placer.Select(i);
                     if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
                 }
@@ -499,7 +508,8 @@ namespace MidnightHour
             Text(r, text, sMini, c);
         }
 
-        bool MiniCard(Rect r, string title, string line1, string line2, Color accent, Color line1Color, bool selected, bool interactive)
+        bool MiniCard(Rect r, string title, string line1, string line2, Color accent, Color line1Color, bool selected, bool interactive,
+                      string tag = null)
         {
             Block(r);
             bool hover = interactive && r.Contains(Event.current.mousePosition);
@@ -509,8 +519,9 @@ namespace MidnightHour
             else if (hover) Outline(r, 2f, HoverOutline);
             Text(new Rect(r.x + 8, r.y + 10, r.width - 12, 24), title, sCardTitle, White);
             Text(new Rect(r.x + 8, r.y + 34, r.width - 12, 20), line1, sMini, selected ? White : line1Color);
-            Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), line2, sMini, selected ? White : Grey);
+            if (tag == null) Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), line2, sMini, selected ? White : Grey);
             if (!interactive) Fill(r, DisabledVeil);
+            if (tag != null) Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), tag, sMini, TagGreen);
             return interactive && GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
@@ -551,9 +562,8 @@ namespace MidnightHour
             else if (p.HoveredTower != null)
             {
                 var t = p.HoveredTower;
-                int refund = gm.RefundFor(t);
                 Text(new Rect(m.x + 26, m.y + 14, 640, 30),
-                     $"{t.Def.displayName}  -  X: dismiss{(refund > 0 ? $" (+{refund} SP)" : "")}", sBody, White);
+                     $"{t.Def.displayName}  -  X: dismiss (frees a slot; it can be placed again)", sBody, White);
             }
         }
 
@@ -670,19 +680,79 @@ namespace MidnightHour
                                          : $"Party: {count} / {need}   -   full. Click a member to take them out.";
             Text(new Rect(0f, infoY, W, 30f), status, sCenter, count == need ? Gold : White);
 
-            if (!first)
+            // Field limit for the coming night (it only ever drops).
+            var leaving = first ? new List<string>() : gm.TowersLeavingField();
+            int limit = gm.FieldLimit, prev = gm.PreviousFieldLimit, after = gm.TowerCount - leaving.Count;
+            string limitText;
+            if (first) limitText = $"Field limit: {limit} towers on the field at once. It drops as you climb.";
+            else
             {
-                var leaving = gm.TowersLeavingField();
-                if (leaving.Count > 0)
-                    Text(new Rect(0f, infoY + 32f, W, 30f), "Leaving the field: " + string.Join(", ", leaving),
-                         sCenter, new Color(1f, 0.55f, 0.55f));
+                limitText = limit < prev ? $"The seal tightens: the field limit drops from {prev} to {limit}." : $"The field limit stays at {limit}.";
+                if (after > limit) limitText += $"  You have {after} on the field, so you'll dismiss {after - limit} next.";
             }
+            Text(new Rect(0f, infoY + 32f, W, 30f), limitText, sCenter, !first && after > limit ? new Color(1f, 0.55f, 0.55f) : Gold);
+
+            if (leaving.Count > 0)
+                Text(new Rect(0f, infoY + 60f, W, 30f), "Leaving the field: " + string.Join(", ", leaving),
+                     sCenter, new Color(1f, 0.55f, 0.55f));
 
             bool ok = gm.CanConfirmParty;
-            Rect btn = new Rect((W - 440f) * 0.5f, infoY + 80f, 440f, 68f);
+            Rect btn = new Rect((W - 440f) * 0.5f, infoY + 96f, 440f, 68f);
             if (Button(btn, first ? "ENTER TARTARUS   [Enter]" : "CONTINUE   [Enter]", Red, White, ok))
                 gm.ConfirmParty();
             Text(new Rect(0f, btn.yMax + 18f, W, 30f), "Press 1-8 or click a member to add or remove them.   Enter to confirm.", sCenter, Grey);
+        }
+
+        /// <summary>Over the new floor's field limit: pick which towers leave before the floor starts (STORY.md §2).</summary>
+        void DrawDismiss(GameManager gm)
+        {
+            Dim();
+            int limit = gm.FieldLimit, count = gm.TowerCount, keep = gm.TowersAfterDismiss;
+            Slanted(-3f, new Vector2(W * 0.5f, 150f), () =>
+            {
+                Fill(new Rect(-100f, 90f, W + 200f, 120f), Red);
+                Text(new Rect(0f, 98f, W, 70f), "THE SEAL TIGHTENS", sBanner, White);
+                Text(new Rect(0f, 166f, W, 34f),
+                     $"Only {limit} Personas can stay on the field here. Choose {Mathf.Max(0, count - limit)} to dismiss.", sCenter, White);
+            });
+
+            var towers = gm.FieldTowers;
+            const int cols = 4;
+            const float ch = 110f, gap = 18f, y0 = 270f;
+            float cw = Mathf.Min(380f, (W - 80f - (cols - 1) * gap) / cols);
+            int n = towers.Count;
+            int rows = Mathf.CeilToInt(n / (float)cols);
+            for (int i = 0; i < n; i++)
+            {
+                var t = towers[i];
+                if (t == null || t.Def == null) continue;
+                var d = t.Def;
+                int row = i / cols, col = i % cols;
+                int inRow = Mathf.Min(cols, n - row * cols);
+                float rx0 = (W - (inRow * cw + (inRow - 1) * gap)) * 0.5f;
+                Rect r = new Rect(rx0 + col * (cw + gap), y0 + row * (ch + gap), cw, ch);
+                bool marked = gm.IsMarkedForDismiss(t);
+                string who = d.user == PartyMember.Makoto ? "Makoto" : gm.MemberName(d.user);
+                string key = i < 8 ? $"[{i + 1}] " : "";
+                string body = $"{who}  ·  {ElementInfo.Label(d.element)}\n{DefInfo.RoleLabel(d.role)}";
+                if (Card(r, key + d.displayName, body, d.color, marked)) gm.ToggleDismiss(i);
+                if (marked)
+                {
+                    Rect badge = new Rect(r.xMax - 118f, r.yMax - 34f, 106f, 26f);
+                    Fill(badge, White);
+                    Text(badge, "DISMISS", sTiny, Red, false);
+                }
+            }
+
+            float infoY = y0 + rows * (ch + gap) + 6f;
+            bool ok = gm.CanConfirmDismiss;
+            string status = ok ? $"{keep} of {count} will stay (limit {limit}). Ready."
+                               : $"{keep} of {count} would stay. Mark {keep - limit} more to get down to {limit}.";
+            Text(new Rect(0f, infoY, W, 30f), status, sCenter, ok ? Gold : new Color(1f, 0.55f, 0.55f));
+
+            Rect btn = new Rect((W - 440f) * 0.5f, infoY + 44f, 440f, 68f);
+            if (Button(btn, "CONTINUE   [Enter]", Red, White, ok)) gm.ConfirmDismiss();
+            Text(new Rect(0f, btn.yMax + 18f, W, 30f), "Press 1-8 or click a tower to mark or unmark it.   Enter to confirm.", sCenter, Grey);
         }
 
         void DrawFreeTime(GameManager gm)
@@ -701,7 +771,6 @@ namespace MidnightHour
                 $"[1] MAGICIAN   Rank {gm.Rank(SocialLink.Magician)} > {gm.Rank(SocialLink.Magician) + 1}",
                 $"[2] EMPRESS    Rank {gm.Rank(SocialLink.Empress)} > {gm.Rank(SocialLink.Empress) + 1}",
                 $"[3] CHARIOT    Rank {gm.Rank(SocialLink.Chariot)} > {gm.Rank(SocialLink.Chariot) + 1}",
-                $"[4] FOOL       Rank {gm.Rank(SocialLink.Fool)} > {gm.Rank(SocialLink.Fool) + 1}",
             };
             int dmgPct = Mathf.RoundToInt(gm.rankDamageBonus * 100f);
             int ratePct = Mathf.RoundToInt(gm.rankFireRateBonus * 100f);
@@ -710,18 +779,18 @@ namespace MidnightHour
                 $"Fire towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe kid who never shuts up about fire.",
                 $"Ice towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nThe student council president. Ice cold.",
                 $"Elec towers: +{dmgPct}% damage, +{ratePct}% fire rate.\nYour rival from the track team.",
-                "+1 tower slot.\nA quiet night alone, thinking it all over.",
             };
-            Color[] accents = { ElementInfo.GetColor(Element.Fire), ElementInfo.GetColor(Element.Ice), ElementInfo.GetColor(Element.Elec), White };
+            Color[] accents = { ElementInfo.GetColor(Element.Fire), ElementInfo.GetColor(Element.Ice), ElementInfo.GetColor(Element.Elec) };
 
-            const float cw = 470f, ch = 150f, gap = 24f;
-            float x0 = (W - (cw * 2f + gap)) * 0.5f;
-            for (int i = 0; i < 4; i++)
+            const float gap = 24f, ch = 150f;
+            float cw = Mathf.Min(470f, (W - 80f - 2f * gap) / 3f);
+            float x0 = (W - (cw * 3f + gap * 2f)) * 0.5f;
+            for (int i = 0; i < 3; i++)
             {
-                Rect r = new Rect(x0 + (i % 2) * (cw + gap), 300f + (i / 2) * (ch + gap), cw, ch);
+                Rect r = new Rect(x0 + i * (cw + gap), 300f, cw, ch);
                 if (Card(r, titles[i], bodies[i], accents[i], false)) gm.ChooseLink((SocialLink)i);
             }
-            Text(new Rect(0f, 300f + 2f * (ch + gap) + 20f, W, 30f), "Press 1-4 or click a card.", sCenter, gold);
+            Text(new Rect(0f, 300f + ch + 30f, W, 30f), "Press 1-3 or click a card.", sCenter, gold);
         }
 
         void DrawEnd(GameManager gm, bool won)

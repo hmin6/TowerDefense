@@ -6,7 +6,8 @@ namespace MidnightHour
     /// Mouse placement: pick a tower (1-3 = party members' Personas, 4 = cycle Makoto's Personas,
     /// or click a card), a ghost follows the cursor
     /// (green = valid, red = blocked) with its range ring, left-click places, right-click / Esc cancels.
-    /// With nothing selected, hover a tower and press X to dismiss it for a partial refund.
+    /// With nothing selected, hover a tower and press X to dismiss it (its slot and Persona become free again).
+    /// Placing is free; the field limit and "each Persona once" are the only rules (GameManager.PlacementBlockReason).
     /// </summary>
     public class TowerPlacer : MonoBehaviour
     {
@@ -62,7 +63,13 @@ namespace MidnightHour
             lastTint = -1;
         }
 
-        /// <summary>Key 4: step through Makoto's Personas (the Wild Card), wrapping around.</summary>
+        /// <summary>True if this card can be picked now: the field isn't full and that Persona isn't already placed.</summary>
+        public static bool CanPick(GameManager gm, int index)
+        {
+            return gm != null && index >= 0 && index < gm.Towers.Count && gm.PlacementBlockReason(gm.Towers[index]) == null;
+        }
+
+        /// <summary>Key 4: step through Makoto's Personas (the Wild Card) that aren't on the field yet, wrapping around.</summary>
         public void CycleWildCard()
         {
             var gm = GameManager.Instance;
@@ -70,9 +77,19 @@ namespace MidnightHour
             int first = gm.MemberTowerCount;
             int count = gm.Towers.Count - first;
             if (count <= 0) return;
-            int next = Selected >= first ? first + (Selected - first + 1) % count : first;
-            if (next == Selected) return; // only one Persona: keep it selected
-            Select(next);
+            int start = Selected >= first ? Selected - first : -1;
+            for (int step = 1; step <= count; step++)
+            {
+                int next = first + ((start + step) % count + count) % count;
+                if (next == Selected) return; // no other Persona available: keep the current one
+                if (CanPick(gm, next)) { Select(next); return; }
+            }
+        }
+
+        void PickOrToggle(GameManager gm, int index)
+        {
+            if (index == Selected) Cancel();            // pressing the same key again deselects
+            else if (CanPick(gm, index)) Select(index);
         }
 
         public void Cancel()
@@ -102,14 +119,13 @@ namespace MidnightHour
             }
 
             // Ignore keys on the exact frame the state changed (the same key may have closed a menu).
-            // At the tower limit the cards are disabled, so the keys are too (dismiss a tower with X first).
-            bool full = gm.TowerCount >= gm.TowerLimit;
-            if (Time.frameCount != gm.StateChangedFrame && !full)
+            // Keys follow the cards: a full field or an already-placed Persona can't be picked.
+            if (Time.frameCount != gm.StateChangedFrame && !gm.FieldFull)
             {
                 int members = gm.MemberTowerCount;
-                if (InputCompat.Down(GameKey.Tower1) && members > 0) Select(0);
-                if (InputCompat.Down(GameKey.Tower2) && members > 1) Select(1);
-                if (InputCompat.Down(GameKey.Tower3) && members > 2) Select(2);
+                if (InputCompat.Down(GameKey.Tower1) && members > 0) PickOrToggle(gm, 0);
+                if (InputCompat.Down(GameKey.Tower2) && members > 1) PickOrToggle(gm, 1);
+                if (InputCompat.Down(GameKey.Tower3) && members > 2) PickOrToggle(gm, 2);
                 if (InputCompat.Down(GameKey.Choice4)) CycleWildCard();
             }
             if (InputCompat.Down(GameKey.Cancel)) Cancel();
@@ -129,7 +145,7 @@ namespace MidnightHour
                 {
                     ring.enabled = true;
                     VisualFactory.SetCircle(ring, HoveredTower.transform.position, HoveredTower.Def.range);
-                    if (InputCompat.Down(GameKey.Sell)) gm.SellTower(HoveredTower);
+                    if (InputCompat.Down(GameKey.Sell)) gm.DismissTower(HoveredTower);
                 }
                 return;
             }
@@ -168,8 +184,9 @@ namespace MidnightHour
 
             if (InputCompat.LeftClickDown && CurrentValid)
             {
-                gm.TryBuildTower(Selected, p);
-                lastTint = -1; // re-validate colours next frame (SP / limit changed)
+                // Each Persona goes on the field once, so a successful placement ends the selection.
+                if (gm.TryBuildTower(Selected, p)) Cancel();
+                else lastTint = -1; // re-validate colours next frame
             }
         }
 
@@ -189,6 +206,13 @@ namespace MidnightHour
             var gm = GameManager.Instance;
             var def = gm.Towers[Selected];
 
+            // Rules first (Persona already placed, field limit): they apply wherever you point.
+            string rule = gm.PlacementBlockReason(def);
+            if (rule != null)
+            {
+                reason = rule;
+                return false;
+            }
             if (Mathf.Abs(p.x) > mapHalfExtents.x || Mathf.Abs(p.z) > mapHalfExtents.y)
             {
                 reason = "Outside the battlefield";
@@ -208,16 +232,6 @@ namespace MidnightHour
                     reason = "Too close to another tower";
                     return false;
                 }
-            }
-            if (gm.TowerCount >= gm.TowerLimit)
-            {
-                reason = $"Tower limit reached ({gm.TowerLimit}). Press X on a tower to dismiss it.";
-                return false;
-            }
-            if (gm.SP < def.cost)
-            {
-                reason = $"Not enough SP (need {def.cost}, have {gm.SP})";
-                return false;
             }
             reason = null;
             return true;

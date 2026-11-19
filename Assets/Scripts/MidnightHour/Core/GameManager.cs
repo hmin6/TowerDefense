@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace MidnightHour
 {
-    public enum GameState { Briefing, Planning, Night, FreeTime, Victory, GameOver, PartySelect }
+    public enum GameState { Briefing, Planning, Night, FreeTime, Victory, GameOver, PartySelect, Dismiss }
 
     /// <summary>Persona-style "Social Links" you rank up between nights.</summary>
     public enum SocialLink { Magician, Empress, Chariot, Fool }
@@ -11,7 +11,8 @@ namespace MidnightHour
     /// <summary>
     /// Game rules and flow:
     /// Briefing -> PartySelect (Makoto + 3) -> Planning (place towers) -> Night (wave)
-    ///   -> FreeTime (rank a Social Link) -> PartySelect (swap members) -> Planning ...
+    ///   -> FreeTime (rank a Social Link) -> PartySelect (swap members)
+    ///   -> Dismiss (only if over the new, lower field limit) -> Planning ...
     /// The game ends the moment any Shadow reaches the Clock Tower.
     /// </summary>
     [DefaultExecutionOrder(-50)]
@@ -21,11 +22,14 @@ namespace MidnightHour
 
         [Header("Rules")]
         public int startingSP = 350;
-        public int baseTowerLimit = 6;
-        [Range(0f, 1f)] public float refundFraction = 0.5f;
         public float weaknessMultiplier = 1.5f;
         public float resistMultiplier = 0.5f;
         public float knockdownDuration = 1.6f;
+
+        [Header("Field limit (STORY.md §2)")]
+        [Tooltip("Most towers allowed on the field at once, per floor (STORY.md: 8, 7, 6, 6, 5, 4). " +
+                 "Until floors exist (#4), night N uses entry N. Later floors reuse the last entry.")]
+        public List<int> fieldLimits = new List<int> { 8, 7, 6, 6, 5, 4 };
 
         [Header("Party (STORY.md §2)")]
         [Tooltip("How many members join Makoto. STORY.md: 3. Keys 1-3 pick their Personas, so 3 is the maximum.")]
@@ -71,14 +75,16 @@ namespace MidnightHour
         public int GameSpeed { get; private set; } = 1;
 
         public int TowerCount { get { return Tower.All.Count; } }
-        public int TowerLimit { get { return baseTowerLimit + Rank(SocialLink.Fool); } }
+        /// <summary>The current floor's field limit. Placing is free; this is the only limit, and nothing raises it.</summary>
+        public int FieldLimit { get { return LimitForFloor(WaveIndex); } }
+        public bool FieldFull { get { return TowerCount >= FieldLimit; } }
         public bool CanPlaceNow { get { return State == GameState.Planning || State == GameState.Night; } }
         public bool IsModalState
         {
             get
             {
-                return State == GameState.Briefing || State == GameState.PartySelect || State == GameState.FreeTime ||
-                       State == GameState.Victory || State == GameState.GameOver;
+                return State == GameState.Briefing || State == GameState.PartySelect || State == GameState.Dismiss ||
+                       State == GameState.FreeTime || State == GameState.Victory || State == GameState.GameOver;
             }
         }
         public int ShadowsRemaining
@@ -89,6 +95,8 @@ namespace MidnightHour
         readonly int[] ranks = new int[4];
         // The members chosen to go with Makoto. Cleared on restart: starting over means choosing again.
         readonly List<PartyMember> party = new List<PartyMember>();
+        // Towers marked on the dismiss screen; they leave the field when it's confirmed.
+        readonly HashSet<Tower> dismissMarks = new HashSet<Tower>();
         WaveSpawner spawner;
         AudioSource sfx;
         float allOutTimer;
@@ -143,6 +151,7 @@ namespace MidnightHour
                 if (State == GameState.Briefing) BeginGame();
                 else if (State == GameState.Planning) StartNight();
                 else if (State == GameState.PartySelect) ConfirmParty();
+                else if (State == GameState.Dismiss) ConfirmDismiss();
             }
 
             // Keys 1-8 toggle members. Skip the frame the screen opened, so the key that closed
@@ -153,12 +162,19 @@ namespace MidnightHour
                     if (InputCompat.Down(PartyKeys[i])) TogglePartyMember(i);
             }
 
+            // Keys 1-8 mark towers on the dismiss screen (the field never holds more than 8).
+            if (State == GameState.Dismiss && Time.frameCount != StateChangedFrame)
+            {
+                for (int i = 0; i < PartyKeys.Length; i++)
+                    if (InputCompat.Down(PartyKeys[i])) ToggleDismiss(i);
+            }
+
             if (State == GameState.FreeTime)
             {
                 if (InputCompat.Down(GameKey.Tower1)) ChooseLink(SocialLink.Magician);
                 else if (InputCompat.Down(GameKey.Tower2)) ChooseLink(SocialLink.Empress);
                 else if (InputCompat.Down(GameKey.Tower3)) ChooseLink(SocialLink.Chariot);
-                else if (InputCompat.Down(GameKey.Choice4)) ChooseLink(SocialLink.Fool);
+                // No Fool link: it gave +1 tower slot, and nothing may raise the field limit (#3).
             }
 
             if (InputCompat.Down(GameKey.Pause) && CanPlaceNow) TogglePause();
@@ -275,6 +291,7 @@ namespace MidnightHour
             GameSpeed = 1;
             // Like entering Tartarus: pick who goes in. Starting over means choosing the party again.
             party.Clear();
+            dismissMarks.Clear();
             Towers = new List<TowerDef>();
             MemberTowerCount = 0;
             SetState(GameState.PartySelect);
@@ -344,15 +361,87 @@ namespace MidnightHour
             Towers = placeable;
 
             foreach (var t in new List<Tower>(Tower.All))
-            {
-                if (t == null || t.Def == null || CanStayOnField(t.Def)) continue;
-                Flash.Spawn(t.transform.position + Vector3.up, Color.white, 1.2f, 0.3f);
-                Destroy(t.gameObject);
-            }
+                if (t != null && t.Def != null && !CanStayOnField(t.Def)) RemoveTower(t);
             if (TowerPlacer.Instance != null) TowerPlacer.Instance.Cancel();
 
+            EnterFloor();
+        }
+
+        /// <summary>Starts preparing the floor, unless the field is over its (lower) limit: then the dismiss screen comes first.</summary>
+        void EnterFloor()
+        {
+            if (TowerCount > FieldLimit)
+            {
+                dismissMarks.Clear();
+                SetState(GameState.Dismiss);
+                Banner("THE SEAL TIGHTENS", new Color(0.86f, 0.06f, 0.12f));
+                return;
+            }
             SetState(GameState.Planning);
             if (WaveIndex < Waves.Count) Banner(Waves[WaveIndex].title.ToUpperInvariant(), Color.white);
+        }
+
+        // ------------------------------------------------------------ Field limit (STORY.md §2)
+
+        public int LimitForFloor(int floor)
+        {
+            if (fieldLimits == null || fieldLimits.Count == 0) return 6;
+            return Mathf.Max(1, fieldLimits[Mathf.Clamp(floor, 0, fieldLimits.Count - 1)]);
+        }
+
+        /// <summary>The limit on the floor before this one (equal to FieldLimit on the first floor).</summary>
+        public int PreviousFieldLimit { get { return LimitForFloor(WaveIndex - 1); } }
+
+        public bool IsOnField(TowerDef def)
+        {
+            foreach (var t in Tower.All) if (t != null && t.Def == def) return true;
+            return false;
+        }
+
+        /// <summary>Why this Persona can't be placed right now (rules only, not the spot), or null if it can.</summary>
+        public string PlacementBlockReason(TowerDef def)
+        {
+            if (def == null) return "Nothing selected";
+            if (IsOnField(def))
+                return def.user == PartyMember.Makoto
+                    ? $"{def.displayName} is already on the field (each Persona only once)"
+                    : $"{MemberName(def.user)}'s {def.displayName} is already on the field (one tower per member)";
+            if (FieldFull) return $"Field limit reached ({TowerCount}/{FieldLimit}). Press X on a tower to dismiss it.";
+            return null;
+        }
+
+        /// <summary>Takes a tower off the field right away (deactivated now, destroyed at the end of the frame).</summary>
+        void RemoveTower(Tower t)
+        {
+            if (t == null) return;
+            Flash.Spawn(t.transform.position + Vector3.up, Color.white, 1.2f, 0.3f);
+            dismissMarks.Remove(t);
+            t.gameObject.SetActive(false); // leaves Tower.All immediately, so counts are right this frame
+            Destroy(t.gameObject);
+        }
+
+        // ---- dismiss screen
+
+        public IReadOnlyList<Tower> FieldTowers { get { return Tower.All; } }
+        public bool IsMarkedForDismiss(Tower t) { return dismissMarks.Contains(t); }
+        public int MarkedCount { get { return dismissMarks.Count; } }
+        public int TowersAfterDismiss { get { return TowerCount - dismissMarks.Count; } }
+        public bool CanConfirmDismiss { get { return State == GameState.Dismiss && TowersAfterDismiss <= FieldLimit; } }
+
+        /// <summary>Marks or unmarks a placed tower (index into FieldTowers) on the dismiss screen.</summary>
+        public void ToggleDismiss(int index)
+        {
+            if (State != GameState.Dismiss || index < 0 || index >= Tower.All.Count) return;
+            var t = Tower.All[index];
+            if (!dismissMarks.Remove(t)) dismissMarks.Add(t);
+        }
+
+        public void ConfirmDismiss()
+        {
+            if (!CanConfirmDismiss) return;
+            foreach (var t in new List<Tower>(dismissMarks)) RemoveTower(t);
+            dismissMarks.Clear();
+            EnterFloor();
         }
 
         // ------------------------------------------------------------ Towers
@@ -361,23 +450,16 @@ namespace MidnightHour
         {
             if (!CanPlaceNow || typeIndex < 0 || typeIndex >= Towers.Count) return false;
             var def = Towers[typeIndex];
-            if (SP < def.cost || TowerCount >= TowerLimit) return false;
-            SP -= def.cost;
+            if (PlacementBlockReason(def) != null) return false; // placing is free; only the rules can block it
             Factory.BuildTower(def, typeIndex, position);
             return true;
         }
 
-        public int RefundFor(Tower t)
+        /// <summary>X on a tower: it leaves the field, freeing its slot so that Persona can be placed again.</summary>
+        public void DismissTower(Tower t)
         {
-            return Mathf.RoundToInt(t.Def.cost * refundFraction);
-        }
-
-        public void SellTower(Tower t)
-        {
-            if (t == null) return;
-            SP += RefundFor(t);
-            Flash.Spawn(t.transform.position + Vector3.up, Color.white, 1.2f, 0.3f);
-            Destroy(t.gameObject);
+            if (t == null || !CanPlaceNow) return;
+            RemoveTower(t);
         }
 
         // ------------------------------------------------------------ Social Links

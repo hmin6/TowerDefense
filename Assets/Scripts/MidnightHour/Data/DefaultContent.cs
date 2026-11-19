@@ -12,6 +12,12 @@ namespace MidnightHour
         // Indices used by the waves below.
         public const int Mask = 0, Slime = 1, Knight = 2, Reaper = 3;
 
+        /// <summary>Field limit per floor (STORY.md §2): the closer to the Jailer, the stricter.</summary>
+        public static List<int> FieldLimits()
+        {
+            return new List<int> { 8, 7, 6, 6, 5, 4 };
+        }
+
         public static List<EnemyDef> Enemies()
         {
             return new List<EnemyDef>
@@ -59,7 +65,7 @@ namespace MidnightHour
         {
             return new TowerDef
             {
-                displayName = persona, description = description, element = element, cost = 0,
+                displayName = persona, description = description, element = element,
                 user = user, arcana = arcana, role = role, source = source,
                 fireRate = fireRate, projectileSpeed = projectileSpeed, damage = damage, range = range, height = height,
                 projectileScale = projectileScale, color = color,

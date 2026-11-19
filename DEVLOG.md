@@ -26,6 +26,31 @@ Template: copy this block for each session.
 
 ---
 
+## 2026-11-18: #3 Field limit per floor
+**Time spent:** _(fill in)_
+**Goal:** placing is free; the only limit is the Jailer's field limit (8, 7, 6, 6, 5, 4), with each Persona on the field once and a dismiss screen when a floor's limit drops.
+
+### Done
+- Merged PR #21 (#2) after the retest passed. Decided with the student that bonds also boost Makoto's Personas of the member's Arcana (STORY.md and #14 updated).
+- **Field limit:** `fieldLimits` on the GameBootstrap Inspector (default 8, 7, 6, 6, 5, 4). Until floors exist (#4), night N uses floor N's limit. `TowerLimit` became `FieldLimit`, and the HUD reads "FIELD 5/6".
+- **Placing is free:** removed `TowerDef.cost`, the refund (`refundFraction`, `RefundFor`) and the SP check. SP stays for the skills (#10).
+- **Each Persona once:** this covers both "one tower per member" and "each Makoto Persona once". Placed Personas show **ON FIELD**, their cards are disabled, key 4 skips them, and the ghost explains why ("Yukari's Io is already on the field (one tower per member)"). A successful placement ends the selection.
+- **Dismiss screen** (`GameState.Dismiss`, "THE SEAL TIGHTENS"): opens after the party screen when the field is over the new limit. You mark towers with 1-8 or a click, and Continue unlocks once you're at or under the limit. The party screen already warns you ("the field limit drops from 8 to 7 ... you'll dismiss 1 next").
+- **No way to win slots back:** removed the Fool Social Link (+1 tower slot) from Free Time, the sidebar and `TowerLimit`. The rest of the Social Links go in #14.
+- README: the limited-towers row, a field-limit A+ bullet, and the controls (dismiss screen, Free Time 1-3).
+
+### Problems & fixes
+- `Destroy` only happens at the end of the frame, so a tower removed by a party swap still counted toward the limit on that frame and could wrongly open the dismiss screen. Removed towers are now deactivated first (`SetActive(false)` takes them out of `Tower.All` right away), then destroyed.
+
+### AI prompts that mattered
+- "Start the next issue in M1 order and stop at the PR."
+
+### Next
+- [ ] Test the PR for #3 in Unity (checklist in the PR)
+- [ ] #4 floor progression (the stairs breather replaces Free Time)
+
+---
+
 ## 2026-11-18: #2 Party selection
 **Time spent:** _(fill in)_
 **Goal:** pick Makoto + 3 members before the climb, place only the party's Personas, and swap members at the break.
