@@ -32,17 +32,25 @@ Template: copy this block for each session.
 
 ### Done
 - Merged PR #19 (#1) after testing it in Unity (0 errors).
-- New **party screen** (`GameState.PartySelect`). Makoto is fixed as leader, and the player picks exactly 3 of the 8 members (keys 1-8 or click, Enter to confirm). It opens before the first night, after every restart (with the last party preselected), and at every break after Free Time.
+- New **party screen** (`GameState.PartySelect`). Makoto is fixed as leader, and the player picks exactly 3 of the 8 members (keys 1-8 or click, Enter to confirm). It opens before the first night, after every restart (the party is cleared, so you choose again), and at every break after Free Time.
 - **Swapping at the break:** the screen lists which placed towers will leave the field, and confirming removes them. Makoto's Personas always stay.
 - **New tower bar:** the party row (3 member Personas, keys 1-3) sits above Makoto's row (11 Personas, key 4 cycles, or click). Hovering any card shows its full stats: rate, projectile speed, height, range, damage and role.
 - Removed the 3 starter towers (Zio Spark, Bufu Frost, Agi Inferno). Every placeable tower is now a Persona from the roster. Placing is free (cost 0), and the tower limit still applies.
 - Added `GameKey.Choice5`-`Choice8` (appended to the enum and to both InputCompat tables).
 - README: updated the requirement rows (placing, tower types, limited towers), controls, A+ list and aiming section.
+- **Review fixes (after the first Unity test, 0 errors):**
+  - Hover highlights only clickable things. Disabled cards (party full, tower limit reached) and the disabled confirm button are dimmed, have no hover and ignore clicks.
+  - "Selected" looks clearly different from hover. Selected is a bright red fill with a thick white border, and party members also get a white **IN PARTY** badge. Hover is a slightly lighter fill with a faint outline.
+  - Restart clears the party.
+  - Makoto's cards are sized from the measured width of their longest text (`GUIStyle.CalcSize`), so nothing is cut off. When they don't fit in one row (4:3), they split into balanced rows (6 + 5), and the party row and start button move up.
+  - At the tower limit, keys 1-4 do nothing either, and the bar says "Tower limit reached: press X on a tower to dismiss it".
+- Updated issues #4 (the stairs breather replaces Free Time) and #14 (remove the Social Links and their side panel), and opened #22 (camera framing and HUD overlap at any aspect ratio).
 
 ### Problems & fixes
 - Free Time also uses keys 1-4, so the key that picks a Social Link could have toggled a member on the same frame. The party keys skip the frame the screen opened (`StateChangedFrame`).
 - 14 cards don't fit in one row at 1080p, so the bar now has two rows (full cards for the party, compact cards for Makoto), with the details moved into a hover tooltip.
 - There's no floor break yet (#4), so the swap hooks into the existing Free Time → Planning transition. #4 can move it with the break.
+- At 4:3, eleven fixed-width cards were too narrow ("Melchizedek", "Last line of defen..."). Fixed by measuring the text instead of guessing a width.
 
 ### AI prompts that mattered
 - "Start issue #2 on a new branch ... include a test checklist I can follow in Unity, and stop for my review."

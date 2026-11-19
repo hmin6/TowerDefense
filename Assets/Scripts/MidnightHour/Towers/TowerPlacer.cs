@@ -102,7 +102,9 @@ namespace MidnightHour
             }
 
             // Ignore keys on the exact frame the state changed (the same key may have closed a menu).
-            if (Time.frameCount != gm.StateChangedFrame)
+            // At the tower limit the cards are disabled, so the keys are too (dismiss a tower with X first).
+            bool full = gm.TowerCount >= gm.TowerLimit;
+            if (Time.frameCount != gm.StateChangedFrame && !full)
             {
                 int members = gm.MemberTowerCount;
                 if (InputCompat.Down(GameKey.Tower1) && members > 0) Select(0);

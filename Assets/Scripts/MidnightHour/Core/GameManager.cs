@@ -87,7 +87,7 @@ namespace MidnightHour
         }
 
         readonly int[] ranks = new int[4];
-        // The members chosen to go with Makoto. Kept across restarts so the last party is preselected.
+        // The members chosen to go with Makoto. Cleared on restart: starting over means choosing again.
         readonly List<PartyMember> party = new List<PartyMember>();
         WaveSpawner spawner;
         AudioSource sfx;
@@ -273,7 +273,10 @@ namespace MidnightHour
             allOutTimer = 0f;
             IsPaused = false;
             GameSpeed = 1;
-            // Like entering Tartarus: pick who goes in. The last party stays preselected.
+            // Like entering Tartarus: pick who goes in. Starting over means choosing the party again.
+            party.Clear();
+            Towers = new List<TowerDef>();
+            MemberTowerCount = 0;
             SetState(GameState.PartySelect);
         }
 

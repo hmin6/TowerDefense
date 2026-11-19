@@ -207,25 +207,47 @@ namespace MidnightHour
             GUI.matrix = m;
         }
 
-        bool Button(Rect r, string label, Color bg, Color fg)
+        // Interaction looks, used by every clickable element:
+        //   hover    = slightly lighter fill + thin faint outline (only when the element can be clicked)
+        //   selected = bright red fill + thick white border (clearly not a hover)
+        //   disabled = dimmed, no hover, never returns a click
+        static readonly Color HoverFill = new Color(0.2f, 0.2f, 0.23f, 0.96f);
+        static readonly Color SelectedFill = new Color(0.8f, 0.05f, 0.11f, 0.98f);
+        static readonly Color HoverOutline = new Color(1f, 1f, 1f, 0.35f);
+        static readonly Color DisabledVeil = new Color(0f, 0f, 0f, 0.5f);
+
+        void Outline(Rect r, float t, Color c)
         {
-            Block(r);
-            bool hover = r.Contains(Event.current.mousePosition);
-            Fill(new Rect(r.x + 6, r.y + 6, r.width, r.height), new Color(0, 0, 0, 0.6f));
-            Fill(r, hover ? Color.Lerp(bg, White, 0.2f) : bg);
-            Text(r, label, sButton, fg, false);
-            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+            Fill(new Rect(r.x, r.y, r.width, t), c);
+            Fill(new Rect(r.x, r.yMax - t, r.width, t), c);
+            Fill(new Rect(r.x, r.y, t, r.height), c);
+            Fill(new Rect(r.xMax - t, r.y, t, r.height), c);
         }
 
-        bool Card(Rect r, string title, string body, Color accent, bool highlighted)
+        bool Button(Rect r, string label, Color bg, Color fg, bool enabled = true)
         {
             Block(r);
-            bool hover = r.Contains(Event.current.mousePosition);
-            Fill(r, highlighted ? new Color(0.55f, 0.03f, 0.08f, 0.96f) : hover ? new Color(0.14f, 0.14f, 0.16f, 0.95f) : Panel);
+            bool hover = enabled && r.Contains(Event.current.mousePosition);
+            Fill(new Rect(r.x + 6, r.y + 6, r.width, r.height), new Color(0, 0, 0, 0.6f));
+            Fill(r, enabled ? (hover ? Color.Lerp(bg, White, 0.2f) : bg) : new Color(0.3f, 0.3f, 0.32f));
+            if (hover) Outline(r, 2f, HoverOutline);
+            Text(r, label, sButton, enabled ? fg : Grey, false);
+            return enabled && GUI.Button(r, GUIContent.none, GUIStyle.none);
+        }
+
+        bool Card(Rect r, string title, string body, Color accent, bool selected, bool interactive = true)
+        {
+            Block(r);
+            bool hover = interactive && r.Contains(Event.current.mousePosition);
+            Fill(r, selected ? SelectedFill : hover ? HoverFill : Panel);
             Fill(new Rect(r.x, r.y, 10, r.height), accent);
+            if (selected) Outline(r, 4f, White);
+            else if (hover) Outline(r, 2f, HoverOutline);
             Text(new Rect(r.x + 24, r.y + 12, r.width - 34, 36), title, sHeader, White);
-            Text(new Rect(r.x + 24, r.y + 52, r.width - 34, r.height - 60), body, sSmall, new Color(0.88f, 0.88f, 0.9f));
-            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+            Text(new Rect(r.x + 24, r.y + 52, r.width - 34, r.height - 60), body, sSmall,
+                 selected ? White : new Color(0.88f, 0.88f, 0.9f));
+            if (!interactive) Fill(r, DisabledVeil);
+            return interactive && GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
         // ---- world-space overlays
@@ -368,84 +390,128 @@ namespace MidnightHour
             Text(new Rect(r.x + 18, r.yMax - 36, w - 36, 28), "Shadow eye colour = its weakness.     [H] hide", sSmall, Gold);
         }
 
-        // Tower bar layout (virtual 1080p): Makoto's row at the bottom, the party row above it,
-        // and the start button above both.
-        const float BarBottom = 16f, MiniH = 80f, PartyCardW = 330f, PartyCardH = 104f, RowLabelH = 24f;
-        static float MakotoRowY { get { return H - BarBottom - MiniH; } }
-        static float PartyRowY { get { return MakotoRowY - RowLabelH - 6f - PartyCardH; } }
-        static float StartButtonY { get { return PartyRowY - RowLabelH - 10f - 60f; } }
+        // Tower bar layout (virtual 1080p): Makoto's Personas at the bottom (one or two rows),
+        // the party row above them, and the start button above both.
+        const float BarBottom = 16f, MiniH = 80f, MiniGap = 8f, MiniMaxW = 180f, MiniPad = 22f;
+        const float PartyCardW = 330f, PartyCardH = 104f, PartyGap = 14f, RowLabelH = 24f;
+
+        struct BarLayout
+        {
+            public int members, makotoCount, perRow, rows;
+            public float miniW, makotoTop, partyY, startY;
+        }
+
+        /// <summary>
+        /// Makoto's cards are never narrower than their longest text (name, element, role), so nothing
+        /// is cut off. If they don't fit in one row at that width (e.g. 4:3), they split into balanced rows.
+        /// </summary>
+        BarLayout LayoutBar(GameManager gm)
+        {
+            var L = new BarLayout { members = gm.MemberTowerCount };
+            L.makotoCount = Mathf.Max(0, gm.Towers.Count - L.members);
+            L.makotoTop = H - BarBottom;
+            if (L.makotoCount > 0)
+            {
+                float minW = 0f;
+                for (int i = L.members; i < gm.Towers.Count; i++)
+                {
+                    var d = gm.Towers[i];
+                    minW = Mathf.Max(minW, sCardTitle.CalcSize(new GUIContent(d.displayName)).x);
+                    minW = Mathf.Max(minW, sMini.CalcSize(new GUIContent(ElementInfo.Label(d.element))).x);
+                    minW = Mathf.Max(minW, sMini.CalcSize(new GUIContent(DefInfo.RoleLabel(d.role))).x);
+                }
+                minW += MiniPad;
+                float avail = W - 40f;
+                int fit = Mathf.Clamp(Mathf.FloorToInt((avail + MiniGap) / (minW + MiniGap)), 1, L.makotoCount);
+                L.rows = Mathf.CeilToInt(L.makotoCount / (float)fit);
+                L.perRow = Mathf.CeilToInt(L.makotoCount / (float)L.rows);
+                L.miniW = Mathf.Clamp((avail - (L.perRow - 1) * MiniGap) / L.perRow, minW, Mathf.Max(minW, MiniMaxW));
+                L.makotoTop = H - BarBottom - L.rows * MiniH - (L.rows - 1) * MiniGap;
+            }
+            float above = L.makotoCount > 0 ? L.makotoTop - RowLabelH - 6f : L.makotoTop;
+            L.partyY = L.members > 0 ? above - PartyCardH : above;
+            L.startY = (L.members > 0 ? L.partyY - RowLabelH : L.partyY) - 10f - 60f;
+            return L;
+        }
 
         void DrawTowerCards(GameManager gm)
         {
             var placer = TowerPlacer.Instance;
+            var L = LayoutBar(gm);
+            // At the tower limit the cards are disabled (dimmed, no hover, no click) until a tower is dismissed.
             bool full = gm.TowerCount >= gm.TowerLimit;
-            Color dimmed = new Color(0, 0, 0, 0.45f);
             TowerDef hovered = null;
             Rect hoveredRect = default;
             Vector2 mouse = Event.current.mousePosition;
 
             // Party row: the members' Personas, keys 1-3.
-            int members = gm.MemberTowerCount;
-            const float gap = 14f;
-            float px0 = (W - (members * PartyCardW + (members - 1) * gap)) * 0.5f;
-            if (members > 0)
-                RowLabel(new Rect(px0, PartyRowY - RowLabelH, members * PartyCardW + (members - 1) * gap, RowLabelH),
-                         "PARTY   [1] [2] [3]");
-            for (int i = 0; i < members; i++)
+            float partyRowW = L.members * PartyCardW + (L.members - 1) * PartyGap;
+            float px0 = (W - partyRowW) * 0.5f;
+            if (L.members > 0)
+            {
+                Rect label = new Rect(px0, L.partyY - RowLabelH, partyRowW, RowLabelH);
+                RowLabel(label, "PARTY   [1] [2] [3]", Gold);
+                if (full)
+                    Text(label, $"Tower limit reached ({gm.TowerLimit}): press X on a tower to dismiss it", sTagRight,
+                         new Color(1f, 0.45f, 0.45f));
+            }
+            for (int i = 0; i < L.members; i++)
             {
                 var d = gm.Towers[i];
-                Rect r = new Rect(px0 + i * (PartyCardW + gap), PartyRowY, PartyCardW, PartyCardH);
+                Rect r = new Rect(px0 + i * (PartyCardW + PartyGap), L.partyY, PartyCardW, PartyCardH);
                 bool selected = placer != null && placer.Selected == i;
                 string body =
                     $"{gm.MemberName(d.user)}  ·  {ElementInfo.Label(d.element)}  ·  {DefInfo.RoleLabel(d.role)}\n" +
                     $"Rate {gm.EffectiveFireRate(d):0.0#}/s  ·  Proj {d.projectileSpeed:0} m/s{(d.ballistic ? " arc" : "")}  ·  H {d.height:0.0} m";
-                if (Card(r, $"[{i + 1}] {d.displayName}", body, d.color, selected) && placer != null) placer.Select(i);
-                if (full) Fill(r, dimmed);
+                if (Card(r, $"[{i + 1}] {d.displayName}", body, d.color, selected, !full) && placer != null) placer.Select(i);
                 if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
             }
 
-            // Makoto's row: the Wild Card's Personas, key 4 cycles.
-            int n = gm.Towers.Count - members;
-            if (n > 0)
+            // Makoto's rows: the Wild Card's Personas, key 4 cycles.
+            if (L.makotoCount > 0)
             {
-                const float mgap = 8f;
-                float cw = Mathf.Min(156f, (W - 40f - (n - 1) * mgap) / n);
-                float mx0 = (W - (n * cw + (n - 1) * mgap)) * 0.5f;
-                RowLabel(new Rect(mx0, MakotoRowY - RowLabelH, n * cw + (n - 1) * mgap, RowLabelH),
-                         "MAKOTO  ·  WILD CARD   [4] cycle, or click");
-                for (int k = 0; k < n; k++)
+                float rowW = L.perRow * L.miniW + (L.perRow - 1) * MiniGap;
+                float mx0 = (W - rowW) * 0.5f;
+                RowLabel(new Rect(mx0, L.makotoTop - RowLabelH, rowW, RowLabelH), "MAKOTO  ·  WILD CARD   [4] cycle, or click", Gold);
+                for (int k = 0; k < L.makotoCount; k++)
                 {
-                    int i = members + k;
+                    int i = L.members + k;
+                    int row = k / L.perRow, col = k % L.perRow;
+                    int inRow = Mathf.Min(L.perRow, L.makotoCount - row * L.perRow);
+                    float rx0 = (W - (inRow * L.miniW + (inRow - 1) * MiniGap)) * 0.5f; // centre a shorter last row
                     var d = gm.Towers[i];
-                    Rect r = new Rect(mx0 + k * (cw + mgap), MakotoRowY, cw, MiniH);
+                    Rect r = new Rect(rx0 + col * (L.miniW + MiniGap), L.makotoTop + row * (MiniH + MiniGap), L.miniW, MiniH);
                     bool selected = placer != null && placer.Selected == i;
                     if (MiniCard(r, d.displayName, ElementInfo.Label(d.element), DefInfo.RoleLabel(d.role),
-                                 d.color, ElementInfo.GetColor(d.element), selected) && placer != null)
+                                 d.color, ElementInfo.GetColor(d.element), selected, !full) && placer != null)
                         placer.Select(i);
-                    if (full) Fill(r, dimmed);
                     if (r.Contains(mouse)) { hovered = d; hoveredRect = r; }
                 }
             }
 
+            // The stats tooltip is information, not a highlight, so it shows even when the cards are disabled.
             if (hovered != null) DrawTowerTooltip(gm, hovered, hoveredRect);
         }
 
-        void RowLabel(Rect r, string text)
+        void RowLabel(Rect r, string text, Color c)
         {
             Block(r);
-            Text(r, text, sMini, Gold);
+            Text(r, text, sMini, c);
         }
 
-        bool MiniCard(Rect r, string title, string line1, string line2, Color accent, Color line1Color, bool selected)
+        bool MiniCard(Rect r, string title, string line1, string line2, Color accent, Color line1Color, bool selected, bool interactive)
         {
             Block(r);
-            bool hover = r.Contains(Event.current.mousePosition);
-            Fill(r, selected ? new Color(0.55f, 0.03f, 0.08f, 0.96f) : hover ? new Color(0.14f, 0.14f, 0.16f, 0.95f) : Panel);
+            bool hover = interactive && r.Contains(Event.current.mousePosition);
+            Fill(r, selected ? SelectedFill : hover ? HoverFill : Panel);
             Fill(new Rect(r.x, r.y, r.width, 6), accent);
+            if (selected) Outline(r, 3f, White);
+            else if (hover) Outline(r, 2f, HoverOutline);
             Text(new Rect(r.x + 8, r.y + 10, r.width - 12, 24), title, sCardTitle, White);
-            Text(new Rect(r.x + 8, r.y + 34, r.width - 12, 20), line1, sMini, line1Color);
-            Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), line2, sMini, Grey);
-            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+            Text(new Rect(r.x + 8, r.y + 34, r.width - 12, 20), line1, sMini, selected ? White : line1Color);
+            Text(new Rect(r.x + 8, r.y + 54, r.width - 12, 20), line2, sMini, selected ? White : Grey);
+            if (!interactive) Fill(r, DisabledVeil);
+            return interactive && GUI.Button(r, GUIContent.none, GUIStyle.none);
         }
 
         /// <summary>Full stats for the hovered card, floating just above it.</summary>
@@ -493,7 +559,7 @@ namespace MidnightHour
 
         void DrawStartButton(GameManager gm)
         {
-            Rect r = new Rect((W - 500f) * 0.5f, StartButtonY, 500f, 60f);
+            Rect r = new Rect((W - 500f) * 0.5f, LayoutBar(gm).startY, 500f, 60f);
             if (Button(r, ">>  BEGIN THE DARK HOUR   [Enter]", Red, White)) gm.StartNight();
         }
 
@@ -576,7 +642,7 @@ namespace MidnightHour
 
             // The 8 members, 4 x 2.
             const int cols = 4;
-            const float ch = 160f, gap = 18f, y0 = 330f;
+            const float ch = 170f, gap = 18f, y0 = 330f;
             float cw = Mathf.Min(410f, (W - 80f - (cols - 1) * gap) / cols);
             float x0 = (W - (cols * cw + (cols - 1) * gap)) * 0.5f;
             int count = gm.PartyCount;
@@ -588,9 +654,15 @@ namespace MidnightHour
                 bool inParty = gm.IsInParty(m.id);
                 string key = i < 8 ? $"[{i + 1}] " : "";
                 string body = $"{p.displayName}  ·  {DefInfo.ArcanaLabel(p.arcana)}  ·  {ElementInfo.Label(p.element)}\n{p.description}";
-                if (Card(r, key + m.displayName.ToUpperInvariant(), body, p.color, inParty)) gm.TogglePartyMember(i);
-                if (inParty) Text(new Rect(r.xMax - 130f, r.yMax - 28f, 120f, 24f), "IN PARTY", sTagRight, Gold);
-                else if (count >= need) Fill(r, new Color(0, 0, 0, 0.45f));
+                // When the party is full, only members already in it can be clicked (to take them out).
+                bool clickable = inParty || count < need;
+                if (Card(r, key + m.displayName.ToUpperInvariant(), body, p.color, inParty, clickable)) gm.TogglePartyMember(i);
+                if (inParty)
+                {
+                    Rect badge = new Rect(r.xMax - 124f, r.yMax - 34f, 112f, 26f);
+                    Fill(badge, White);
+                    Text(badge, "IN PARTY", sTiny, Red, false);
+                }
             }
 
             float infoY = y0 + 2f * (ch + gap) + 4f;
@@ -608,7 +680,7 @@ namespace MidnightHour
 
             bool ok = gm.CanConfirmParty;
             Rect btn = new Rect((W - 440f) * 0.5f, infoY + 80f, 440f, 68f);
-            if (Button(btn, first ? "ENTER TARTARUS   [Enter]" : "CONTINUE   [Enter]", ok ? Red : new Color(0.3f, 0.3f, 0.32f), White) && ok)
+            if (Button(btn, first ? "ENTER TARTARUS   [Enter]" : "CONTINUE   [Enter]", Red, White, ok))
                 gm.ConfirmParty();
             Text(new Rect(0f, btn.yMax + 18f, W, 30f), "Press 1-8 or click a member to add or remove them.   Enter to confirm.", sCenter, Grey);
         }
