@@ -1,7 +1,7 @@
 # STORY.md: Midnight Hour (draft for review)
 
-> **Status:** DRAFT. Nothing in this doc is built yet. Review it, change anything you want, then mark it approved in the story issue.
-> Items marked **[DECIDE]** still need your answer. Items marked **[CHECK]** are details to verify against the game.
+> **Status:** APPROVED (2026-11-18). This is the design the build follows; changes need the student's approval.
+> Items marked **[CHECK]** are details to verify against the game.
 
 ---
 
@@ -126,7 +126,7 @@ This means the game needs **Slash, Strike, Pierce, Light (Hama) and Dark (Mudo)*
 
 Other ideas considered: the Hourglass (sand draining as the seals break) and the Choir (masks singing a seal over the stairs).
 
-**[DECIDE]** Approve the Jailer, or change its name, look or fight.
+**Approved (2026-11-18):** the Jailer, as described above.
 
 ## 5. Roles: every tower does something different
 
@@ -149,19 +149,19 @@ Fuuka is the **navigator** (Lucia), not a tower. She scans and talks to the team
 
 In the movies, Makoto gains a Persona from each full moon Shadow, matching its Arcana. Below are the ones he has **by September** that match **S.E.E.S. Arcana**:
 
-| Persona | Arcana (whose) | Role | What it does |
-|---|---|---|---|
-| Orpheus | Fool (Makoto) | **Generalist** | Balanced at everything; a solid tower to place first |
-| Jack Frost | Magician (Junpei) | **Trapper** | Plants frost mines on the path that burst when Shadows step on them |
-| Sarasvati | Priestess (Fuuka) | **Support aura** | Makes nearby towers fire faster |
-| Oberon | Emperor (Akihiko) | **Chain lightning** | Each hit jumps to several more Shadows |
-| Thoth | Hierophant (Shinjiro) | **SP battery** | Generates team SP over time, fitting for the god of knowledge |
-| Shiisaa | Hierophant (Shinjiro) | **Last line of defense** | Short range, but very heavy damage to any Shadow that gets close to the team |
-| Thor | Chariot (Aigis) | **Anti-air** | Heavy damage to flying Shadows |
-| Melchizedek | Justice (Ken) | **Pulse** | Damages every Shadow around it every few seconds, with no projectile |
-| Lakshmi *(game)* | Empress (Mitsuru) | **Resistance breaker** | Shadows near it lose their resistance, so resisted elements do normal damage |
-| Pixie *(game)* | Lovers (Yukari) | **Multishot** | Fires small shots at up to 3 Shadows at once |
-| Valkyrie *(game)* | Strength (Koromaru) | **Interceptor** | Targets the fastest Shadow in range first and hits fast Shadows harder |
+| Persona | Arcana (whose) | Element | Role | What it does |
+|---|---|---|---|---|
+| Orpheus | Fool (Makoto) | Agi | **Generalist** | Balanced at everything; a solid tower to place first |
+| Jack Frost | Magician (Junpei) | Bufu | **Trapper** | Plants frost mines on the path that burst when Shadows step on them |
+| Sarasvati | Priestess (Fuuka) | Neutral | **Support aura** | Makes nearby towers fire faster |
+| Oberon | Emperor (Akihiko) | Zio | **Chain lightning** | Each hit jumps to several more Shadows |
+| Thoth | Hierophant (Shinjiro) | Agi | **SP battery** | Generates team SP over time, fitting for the god of knowledge |
+| Shiisaa | Hierophant (Shinjiro) | Strike | **Last line of defense** | Short range, but very heavy damage to any Shadow that gets close to the team |
+| Thor | Chariot (Aigis) | Zio | **Anti-air** | Heavy damage to flying Shadows |
+| Melchizedek | Justice (Ken) | Hama | **Pulse** | Damages every Shadow around it every few seconds, with no projectile |
+| Lakshmi *(game)* | Empress (Mitsuru) | Bufu | **Resistance breaker** | Shadows near it lose their resistance, so resisted elements do normal damage |
+| Pixie *(game)* | Lovers (Yukari) | Zio | **Multishot** | Fires small shots at up to 3 Shadows at once |
+| Valkyrie *(game)* | Strength (Koromaru) | Slash | **Interceptor** | Targets the fastest Shadow in range first and hits fast Shadows harder |
 
 **Filling the gaps:** the movies don't show Makoto with a Persona of the Empress, Lovers or Strength Arcana before September. For those three, Lakshmi, Pixie and Valkyrie (marked *game*) are taken from the game's Persona list for that Arcana instead. That gives Makoto one Persona for every S.E.E.S. Arcana, with Hierophant getting two.
 
@@ -187,21 +187,21 @@ In the movies, Makoto gains a Persona from each full moon Shadow, matching its A
 
 ## Approval
 - [ ] Premise approved (September, base Personas, no evolutions)
-- [ ] Party swapping between floors (proposed: yes, at the break)
+- [x] Party swapping between floors (proposed: yes, at the break)
 - [x] Makoto picks freely; suppression limits only the total on the field
-- [ ] Field limit numbers per floor confirmed
-- [ ] Roles approved (no overlaps) and skills checked
+- [x] Field limit numbers per floor confirmed
+- [x] Roles approved (no overlaps) and skills checked
 - [x] Thanatos left out (not part of the September story)
-- [ ] Shiisaa as last line of defense (proposed)
-- [ ] Skills: members only, plus Persona Swap for Makoto (proposed)
+- [x] Shiisaa as last line of defense (proposed)
+- [x] Skills: members only, plus Persona Swap for Makoto (proposed)
 - [x] Skill resource: shared team SP pool
 - [x] Tower cost: placing is free
-- [ ] SP starting numbers (proposed; tuned in playtesting)
+- [x] SP starting numbers (proposed; tuned in playtesting)
 - [x] Suppression stays; no way to win slots back
 - [x] Setting: Tziah I (original *Persona 3*), floors 114-138
-- [ ] Six floors with the Tziah I Shadow lineup (proposed)
+- [x] Six floors with the Tziah I Shadow lineup (proposed)
 - [x] Shadow weaknesses (original *Persona 3*)
-- [ ] Opulent Hand bonus (optional)
-- [ ] Boss: the Jailer (proposed)
+- [x] Opulent Hand bonus (optional)
+- [x] Boss: the Jailer (proposed)
 
 Once these are checked, the build gets split into GitHub issues and done in Claude Code.
