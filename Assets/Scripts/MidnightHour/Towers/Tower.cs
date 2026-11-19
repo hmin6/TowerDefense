@@ -54,7 +54,7 @@ namespace MidnightHour
         void Update()
         {
             var gm = GameManager.Instance;
-            bool active = gm != null && (gm.State == GameState.Night || gm.State == GameState.Planning);
+            bool active = gm != null && (gm.State == GameState.Battle || gm.State == GameState.Planning);
             if (!active || Def == null)
             {
                 if (aimLine != null) aimLine.enabled = false;

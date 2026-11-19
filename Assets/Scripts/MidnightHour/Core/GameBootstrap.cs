@@ -8,7 +8,7 @@ namespace MidnightHour
     /// ONE-CLICK SETUP: put this on an empty GameObject in an empty scene and press Play.
     /// It builds the board, path, camera, lighting and every game system at runtime.
     ///
-    /// All Persona (tower) / enemy / wave stats live in the lists below and are editable in the Inspector.
+    /// All Persona (tower) / enemy / floor stats live in the lists below and are editable in the Inspector.
     /// Right-click the component header > Reset to restore the defaults.
     /// </summary>
     [DefaultExecutionOrder(-100)]
@@ -16,7 +16,9 @@ namespace MidnightHour
     {
         [Header("Content")]
         public List<EnemyDef> enemies = new List<EnemyDef>();
-        public List<WaveDef> waves = new List<WaveDef>();
+        [Tooltip("The sealed floors of Tartarus, in climbing order (STORY.md §3). Each holds one or more waves,\n" +
+                 "and can optionally have its own path.")]
+        public List<FloorDef> floors = new List<FloorDef>();
 
         [Header("S.E.E.S. roster (STORY.md §5). The chosen party decides what's placeable.")]
         [Tooltip("The 8 members who can join Makoto. Each places one tower: their own Persona.")]
@@ -27,6 +29,7 @@ namespace MidnightHour
         [Header("Map")]
         [Tooltip("Optional: an object whose children are path waypoints (in order). Overrides the list below.")]
         public Transform customPathRoot;
+        [Tooltip("The board's default path. A floor with its own Path Points uses those instead.")]
         public List<Vector3> pathControlPoints = new List<Vector3>();
         public Vector2 boardHalfSize = new Vector2(20f, 13f);
         public float pathWidth = 2f;
@@ -34,7 +37,7 @@ namespace MidnightHour
         [Header("Rules")]
         public int startingSP = 350;
         [Tooltip("Field limit per floor: the most towers on the field at once (STORY.md §2: 8, 7, 6, 6, 5, 4).\n" +
-                 "Placing is free; this is the only limit. Until floors exist (#4), night N uses entry N.")]
+                 "Placing is free; this is the only limit. Floor N uses entry N.")]
         public List<int> fieldLimits = new List<int>();
 
         [Header("Look")]
@@ -62,7 +65,7 @@ namespace MidnightHour
         void Reset()
         {
             enemies = DefaultContent.Enemies();
-            waves = DefaultContent.Waves();
+            floors = DefaultContent.Floors();
             members = DefaultContent.Members();
             makotoPersonas = DefaultContent.MakotoPersonas();
             fieldLimits = DefaultContent.FieldLimits();
@@ -72,7 +75,7 @@ namespace MidnightHour
         void FillMissing()
         {
             if (enemies == null || enemies.Count == 0) enemies = DefaultContent.Enemies();
-            if (waves == null || waves.Count == 0) waves = DefaultContent.Waves();
+            if (floors == null || floors.Count == 0) floors = DefaultContent.Floors();
             if (members == null || members.Count == 0) members = DefaultContent.Members();
             if (makotoPersonas == null || makotoPersonas.Count == 0) makotoPersonas = DefaultContent.MakotoPersonas();
             if (fieldLimits == null || fieldLimits.Count == 0) fieldLimits = DefaultContent.FieldLimits();
@@ -86,26 +89,11 @@ namespace MidnightHour
             Camera cam = SetupCamera();
             SetupLighting();
 
-            // Path
-            var pathGo = new GameObject("Enemy Path");
-            var path = pathGo.AddComponent<EnemyPath>();
-            var pts = new List<Vector3>();
-            if (customPathRoot != null && customPathRoot.childCount >= 2)
-                foreach (Transform t in customPathRoot) pts.Add(new Vector3(t.position.x, 0f, t.position.z));
-            else
-                pts.AddRange(pathControlPoints);
-            path.SetControlPoints(pts);
-
-            if (buildEnvironment)
-            {
-                BuildGround();
-                BuildPathVisuals(path);
-                BuildSpawnAndGoal(path);
-            }
-            else
-            {
-                EnsureGroundCollider();
-            }
+            // Path: the board's default route. Each floor can swap in its own (ApplyFloorLayout).
+            path = new GameObject("Enemy Path").AddComponent<EnemyPath>();
+            if (buildEnvironment) BuildGround();
+            else EnsureGroundCollider();
+            ApplyFloorLayout(floors.Count > 0 ? floors[0].pathPoints : null);
 
             // Systems (spawner first so GameManager can find it)
             var systems = new GameObject("Game Systems");
@@ -118,7 +106,7 @@ namespace MidnightHour
             gm.killSound = killSound;
             gm.gameOverSound = gameOverSound;
             gm.victorySound = victorySound;
-            gm.Configure(enemies, waves, spawner);
+            gm.Configure(enemies, floors, spawner, ApplyFloorLayout);
             gm.ConfigureRoster(members, makotoPersonas);
 
             var placer = systems.AddComponent<TowerPlacer>();
@@ -135,6 +123,52 @@ namespace MidnightHour
                 src.spatialBlend = 0f;
                 src.Play();
             }
+        }
+
+        // ------------------------------------------------------------ Floor layout
+
+        EnemyPath path;
+        Transform layoutRoot;
+        readonly List<Vector3> layoutPoints = new List<Vector3>();
+
+        List<Vector3> DefaultPathPoints()
+        {
+            var pts = new List<Vector3>();
+            if (customPathRoot != null && customPathRoot.childCount >= 2)
+                foreach (Transform t in customPathRoot) pts.Add(new Vector3(t.position.x, 0f, t.position.z));
+            else
+                pts.AddRange(pathControlPoints);
+            return pts;
+        }
+
+        /// <summary>
+        /// Puts a floor's path in place: the spline the Shadows follow, plus its visuals (path strip, spawn
+        /// portal, goal). Fewer than 2 points = the board's default path. Does nothing if the path is unchanged.
+        /// </summary>
+        public void ApplyFloorLayout(List<Vector3> floorPoints)
+        {
+            var pts = floorPoints != null && floorPoints.Count >= 2 ? new List<Vector3>(floorPoints) : DefaultPathPoints();
+            for (int i = 0; i < pts.Count; i++) pts[i] = new Vector3(pts[i].x, 0f, pts[i].z);
+            if (layoutRoot != null && SamePoints(pts, layoutPoints)) return;
+
+            layoutPoints.Clear();
+            layoutPoints.AddRange(pts);
+            path.SetControlPoints(pts);
+
+            if (layoutRoot != null) Destroy(layoutRoot.gameObject);
+            layoutRoot = new GameObject("Floor Layout").transform;
+            if (buildEnvironment)
+            {
+                BuildPathVisuals(path, layoutRoot);
+                BuildSpawnAndGoal(path, layoutRoot);
+            }
+        }
+
+        static bool SamePoints(List<Vector3> a, List<Vector3> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++) if ((a[i] - b[i]).sqrMagnitude > 1e-6f) return false;
+            return true;
         }
 
         Camera SetupCamera()
@@ -262,9 +296,10 @@ namespace MidnightHour
 #endif
         }
 
-        void BuildPathVisuals(EnemyPath path)
+        void BuildPathVisuals(EnemyPath path, Transform parent)
         {
             var root = new GameObject("Path Visual").transform;
+            root.SetParent(parent, false);
             var pts = path.Points;
             for (int i = 0; i < pts.Count - 1; i++)
             {
@@ -285,16 +320,17 @@ namespace MidnightHour
             }
         }
 
-        void BuildSpawnAndGoal(EnemyPath path)
+        void BuildSpawnAndGoal(EnemyPath path, Transform parent)
         {
             Vector3 start = path.StartPoint;
             Vector3 end = path.EndPoint;
 
             // Spawn portal
-            if (spawnPrefab != null) Instantiate(spawnPrefab, start, Quaternion.identity);
+            if (spawnPrefab != null) Instantiate(spawnPrefab, start, Quaternion.identity, parent);
             else
             {
                 var portal = new GameObject("Spawn Portal").transform;
+                portal.SetParent(parent, false);
                 portal.position = start;
                 VisualFactory.Prim(PrimitiveType.Cylinder, portal, new Vector3(0f, 0.05f, 0f), new Vector3(2.6f, 0.05f, 2.6f),
                                    new Color(0.45f, 0.1f, 0.85f), 1.8f);
@@ -305,11 +341,12 @@ namespace MidnightHour
                 spin.bobHeight = 0.3f;
             }
 
-            // Goal: the Clock Tower
-            if (goalPrefab != null) Instantiate(goalPrefab, end, Quaternion.identity);
+            // Goal: where the team holds out (the Clock Tower model is a placeholder until #13)
+            if (goalPrefab != null) Instantiate(goalPrefab, end, Quaternion.identity, parent);
             else
             {
-                var tower = new GameObject("Clock Tower").transform;
+                var tower = new GameObject("Team Position").transform;
+                tower.SetParent(parent, false);
                 tower.position = end + new Vector3(1.2f, 0f, 0f);
                 VisualFactory.Prim(PrimitiveType.Cube, tower, new Vector3(0f, 3.5f, 0f), new Vector3(2.2f, 7f, 2.2f),
                                    new Color(0.1f, 0.1f, 0.12f), 0f, keepCollider: false, name: "Body");
